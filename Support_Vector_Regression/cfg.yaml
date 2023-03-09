@@ -1,0 +1,4 @@
+
+num_feature: 75
+bias: True
+l1_coeff: 1e-6
