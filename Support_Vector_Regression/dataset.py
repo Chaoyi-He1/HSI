@@ -40,7 +40,7 @@ class MyDataSet(Dataset):
         return len(self.img_files)
 
     def __getitem__(self, item):
-        r = neo.io.Spike2IO(filename='/path/to/file.hsd')
+        r = neo.io.Spike2IO(filename=self.img_files[item])
         img = r.read_block()
 
         if self.transform is not None:
