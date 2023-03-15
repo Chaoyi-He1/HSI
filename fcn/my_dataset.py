@@ -70,8 +70,8 @@ class HSI_Segmentation(data.Dataset):
         Parameters:
             data_path: the path of the "HSI Dataset folder"
             label_type: can be either "gray" or "viz"
-
-
+            img_type: can be either "OSP" or "PCA"
+            transforms: augmentation methods for images.
         """
         super(HSI_Segmentation, self).__init__()
         assert os.path.isdir(data_path), "path '{}' does not exist.".format(data_path)
