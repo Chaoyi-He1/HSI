@@ -1,7 +1,7 @@
 from PIL import Image
 import torch
 import os
-import scipy.io
+import scipy.io as sio
 import neo
 from pathlib import Path
 from torch.utils.data import Dataset
@@ -29,7 +29,7 @@ class MyDataSet(Dataset):
         try:
             self.filter_path = str(Path(self.filter_path))
             if os.path.isfile(self.filter_path):
-                self.mat_contents = scipy.io.loadmat(self.filter_path)
+                self.mat_contents = sio.loadmat(self.filter_path)
             else:
                 raise Exception("%s does not exist" % self.images_path)
             self.filter_respond = torch.as_tensor(self.mat_contents["responsivity"])
