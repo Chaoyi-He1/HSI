@@ -15,12 +15,12 @@ class SegmentationPresetTrain:
         min_size = int(0.5 * base_size)
         max_size = int(2.0 * base_size)
 
-        trans = [T.RandomResize(min_size, max_size)]
+        trans = [T.ToTensor()]
         if hflip_prob > 0:
             trans.append(T.RandomHorizontalFlip(hflip_prob))
         trans.extend([
             T.RandomCrop(crop_size),
-            T.ToTensor(),
+            T.RandomResize(min_size, max_size), 
             T.Normalize(mean=mean, std=std),
         ])
         self.transforms = T.Compose(trans)
@@ -32,8 +32,8 @@ class SegmentationPresetTrain:
 class SegmentationPresetEval:
     def __init__(self, base_size, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
         self.transforms = T.Compose([
-            T.RandomResize(base_size, base_size),
             T.ToTensor(),
+            T.RandomResize(base_size, base_size),
             T.Normalize(mean=mean, std=std),
         ])
 
@@ -43,7 +43,7 @@ class SegmentationPresetEval:
 
 def get_transform(train):
     base_size = 1800
-    crop_size = 1400
+    crop_size = 1800
 
     return SegmentationPresetTrain(base_size, crop_size) if train else SegmentationPresetEval(base_size)
 

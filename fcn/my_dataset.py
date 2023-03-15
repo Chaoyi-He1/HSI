@@ -2,6 +2,7 @@ import os
 import scipy.io as sio
 import torch.utils.data as data
 from PIL import Image
+import numpy as np
 
 
 class VOCSegmentation(data.Dataset):
@@ -96,7 +97,10 @@ class HSI_Segmentation(data.Dataset):
         Returns:
             tuple: (image, target) where target is the image segmentation.
         """
-        img = sio.loadmat(self.img_files[index])
+        img = sio.loadmat(self.img_files[index])["filtered_img"]
+        # img = np.ascontiguousarray(img.transpose(2, 0, 1))
+        # img = (img - np.min(img)) * 255 / np.max(img)
+        # img = Image.fromarray(img)
         target = Image.open(self.mask_files[index])
 
         if self.transforms is not None:
