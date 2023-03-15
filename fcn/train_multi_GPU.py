@@ -6,7 +6,7 @@ import torch
 
 from src import fcn_resnet50
 from train_utils import train_one_epoch, evaluate, create_lr_scheduler, init_distributed_mode, save_on_master, mkdir
-from my_dataset import VOCSegmentation
+from my_dataset import VOCSegmentation, HSI_Segmentation
 import transforms as T
 
 
@@ -85,17 +85,16 @@ def main(args):
 
     # load train data set
     # VOCdevkit -> VOC2012 -> ImageSets -> Segmentation -> train.txt
-    train_dataset = VOCSegmentation(args.data_path,
-                                    year="2012",
-                                    transforms=get_transform(train=True),
-                                    txt_name="train.txt")
+    train_dataset = HSI_Segmentation(data_path=args.data_path,
+                                     label_type=args.label_type,
+                                     img_type=args.img_type,
+                                     transforms=get_transform(train=True))
     # load validation data set
     # VOCdevkit -> VOC2012 -> ImageSets -> Segmentation -> val.txt
-    val_dataset = VOCSegmentation(args.data_path,
-                                  year="2012",
-                                  transforms=get_transform(train=False),
-                                  txt_name="val.txt")
-
+    val_dataset = HSI_Segmentation(data_path=args.data_path,
+                                   label_type=args.label_type,
+                                   img_type=args.img_type,
+                                   transforms=get_transform(train=False))
     print("Creating data loaders")
     if args.distributed:
         train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
@@ -134,9 +133,8 @@ def main(args):
     if args.aux:
         params = [p for p in model_without_ddp.aux_classifier.parameters() if p.requires_grad]
         params_to_optimize.append({"params": params, "lr": args.lr * 10})
-    optimizer = torch.optim.SGD(
-        params_to_optimize,
-        lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
+    optimizer = torch.optim.Adam(
+        params_to_optimize, lr=args.lr, weight_decay=args.weight_decay)
 
     scaler = torch.cuda.amp.GradScaler() if args.amp else None
 

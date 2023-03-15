@@ -48,7 +48,7 @@ def get_transform(train):
     return SegmentationPresetTrain(base_size, crop_size) if train else SegmentationPresetEval(base_size)
 
 
-def create_model(aux, num_classes, pretrain=True):
+def create_model(aux, num_classes, pretrain=False):
     model = fcn_resnet50(aux=aux, num_classes=num_classes)
 
     if pretrain:
