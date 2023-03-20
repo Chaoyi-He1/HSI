@@ -2,6 +2,7 @@ import os
 import scipy.io as sio
 import torch.utils.data as data
 from PIL import Image
+import numpy as np
 
 
 class VOCSegmentation(data.Dataset):
@@ -79,11 +80,10 @@ class HSI_Segmentation(data.Dataset):
 
         self.img_files = [os.path.join(data_path, img_folder, file)
                           for img_folder in self.img_folder_list
-                          for file in os.listdir(img_folder)
+                          for file in os.listdir(os.path.join(data_path, img_folder))
                           if os.path.splitext(file)[-1].lower() == ".mat" and img_type in file]
         self.img_files.sort()
-        self.mask_files = [img.replace(os.path.splitext(img)[-1], ".png")
-                              .replace(os.path.splitext(img)[-2], "label_" + label_type)
+        self.mask_files = [img.replace(img.split(os.sep)[-1], "label_" + label_type + ".png")
                            for img in self.img_files]
 
         assert (len(self.img_files) == len(self.mask_files))
@@ -97,7 +97,10 @@ class HSI_Segmentation(data.Dataset):
         Returns:
             tuple: (image, target) where target is the image segmentation.
         """
-        img = sio.loadmat(self.img_files[index])
+        img = sio.loadmat(self.img_files[index])["filtered_img"]
+        # img = np.ascontiguousarray(img.transpose(2, 0, 1))
+        # img = (img - np.min(img)) * 255 / np.max(img)
+        # img = Image.fromarray(img)
         target = Image.open(self.mask_files[index])
 
         if self.transforms is not None:

@@ -8,9 +8,9 @@ from torchvision.transforms import functional as F
 
 def pad_if_smaller(img, size, fill=0):
     # 如果图像最小边长小于给定size，则用数值fill进行padding
-    min_size = min(img.size)
+    min_size = min(img.shape[-2:])
     if min_size < size:
-        ow, oh = img.size
+        oh, ow = img.shape[-2:]
         padh = size - oh if oh < size else 0
         padw = size - ow if ow < size else 0
         img = F.pad(img, (0, 0, padw, padh), fill=fill)
@@ -82,6 +82,7 @@ class ToTensor(object):
     def __call__(self, image, target):
         image = F.to_tensor(image)
         target = torch.as_tensor(np.array(target), dtype=torch.int64)
+        target = target.unsqueeze(0) if len(target.shape) != 3 else target
         return image, target
 
 
