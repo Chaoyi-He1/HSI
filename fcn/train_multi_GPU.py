@@ -12,8 +12,8 @@ import transforms as T
 
 class SegmentationPresetTrain:
     def __init__(self, base_size, crop_size, hflip_prob=0.5, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
-        min_size = int(0.5 * base_size)
-        max_size = int(2.0 * base_size)
+        min_size = int(0.8 * base_size)
+        max_size = int(1.05 * base_size)
 
         trans = [T.ToTensor()]
         if hflip_prob > 0:
@@ -21,7 +21,7 @@ class SegmentationPresetTrain:
         trans.extend([
             T.RandomCrop(crop_size),
             T.RandomResize(min_size, max_size), 
-            T.Normalize(mean=mean, std=std),
+            # T.Normalize(mean=mean, std=std),
         ])
         self.transforms = T.Compose(trans)
 
@@ -34,7 +34,7 @@ class SegmentationPresetEval:
         self.transforms = T.Compose([
             T.ToTensor(),
             T.RandomResize(base_size, base_size),
-            T.Normalize(mean=mean, std=std),
+            # T.Normalize(mean=mean, std=std),
         ])
 
     def __call__(self, img, target):
@@ -80,13 +80,13 @@ def main(args):
 
     # load train data set
     # VOCdevkit -> VOC2012 -> ImageSets -> Segmentation -> train.txt
-    train_dataset = HSI_Segmentation(data_path=args.data_path,
+    train_dataset = HSI_Segmentation(data_path=args.train_data_path,
                                      label_type=args.label_type,
                                      img_type=args.img_type,
                                      transforms=get_transform(train=True))
     # load validation data set
     # VOCdevkit -> VOC2012 -> ImageSets -> Segmentation -> val.txt
-    val_dataset = HSI_Segmentation(data_path=args.data_path,
+    val_dataset = HSI_Segmentation(data_path=args.val_data_path,
                                    label_type=args.label_type,
                                    img_type=args.img_type,
                                    transforms=get_transform(train=False))
@@ -150,7 +150,7 @@ def main(args):
             scaler.load_state_dict(checkpoint["scaler"])
 
     if args.test_only:
-        confmat = evaluate(model, val_data_loader, device=device, num_classes=num_classes)
+        confmat = evaluate(model, val_data_loader, device=device, num_classes=num_classes, scaler=scaler)
         val_info = str(confmat)
         print(val_info)
         return
@@ -163,7 +163,7 @@ def main(args):
         mean_loss, lr = train_one_epoch(model, optimizer, train_data_loader, device, epoch,
                                         lr_scheduler=lr_scheduler, print_freq=args.print_freq, scaler=scaler)
 
-        confmat = evaluate(model, val_data_loader, device=device, num_classes=num_classes)
+        confmat = evaluate(model, val_data_loader, device=device, num_classes=num_classes, scaler=scaler)
         val_info = str(confmat)
         print(val_info)
 
@@ -201,7 +201,8 @@ if __name__ == "__main__":
         description=__doc__)
 
     # 训练文件的根目录(VOCdevkit)
-    parser.add_argument('--data-path', default='./HSI Dataset/', help='dataset')
+    parser.add_argument('--train_data_path', default='./HSI Dataset/train/', help='dataset')
+    parser.add_argument('--val_data_path', default='./HSI Dataset/val/', help='dataset')
     parser.add_argument('--label_type', default='gray', help='label type: gray or viz')
     parser.add_argument('--img_type', default='OSP', help='image type: OSP or PCA')
     # 训练设备类型
@@ -209,7 +210,7 @@ if __name__ == "__main__":
     # 检测目标类别数(不包含背景)
     parser.add_argument('--num-classes', default=9, type=int, help='num_classes')
     # 每块GPU上的batch_size
-    parser.add_argument('-b', '--batch-size', default=16, type=int,
+    parser.add_argument('-b', '--batch-size', default=4, type=int,
                         help='images per gpu, the total batch size is $NGPU x batch_size')
     parser.add_argument("--aux", default=False, type=bool, help="auxilier loss")
     # 指定接着从哪个epoch数开始训练
@@ -218,7 +219,7 @@ if __name__ == "__main__":
     parser.add_argument('--epochs', default=200, type=int, metavar='N',
                         help='number of total epochs to run')
     # 是否使用同步BN(在多个GPU之间同步)，默认不开启，开启后训练速度会变慢
-    parser.add_argument('--sync_bn', type=bool, default=False, help='whether using SyncBatchNorm')
+    parser.add_argument('--sync_bn', type=bool, default=True, help='whether using SyncBatchNorm')
     # 数据加载以及预处理的线程数
     parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                         help='number of data loading workers (default: 4)')
@@ -237,7 +238,7 @@ if __name__ == "__main__":
     # 文件保存地址
     parser.add_argument('--output-dir', default='./multi_train', help='path where to save')
     # 基于上次的训练结果接着训练
-    parser.add_argument('--resume', default='', help='resume from checkpoint')
+    parser.add_argument('--resume', default='./multi_train/model_111.pth', help='resume from checkpoint')
     # 不训练，仅测试
     parser.add_argument(
         "--test-only",
@@ -247,11 +248,11 @@ if __name__ == "__main__":
     )
 
     # 分布式进程数
-    parser.add_argument('--world-size', default=1, type=int,
+    parser.add_argument('--world-size', default=4, type=int,
                         help='number of distributed processes')
     parser.add_argument('--dist-url', default='env://', help='url used to set up distributed training')
     # Mixed precision training parameters
-    parser.add_argument("--amp", default=False, type=bool,
+    parser.add_argument("--amp", default=True, type=bool,
                         help="Use torch.cuda.amp for mixed precision training")
 
     args = parser.parse_args()
