@@ -49,7 +49,7 @@ def get_transform(train):
 
 
 def create_model(aux, num_classes):
-    model = fcn_resnet50(aux=aux, num_classes=num_classes)
+    model = fcn_resnet50(aux=aux, num_classes=num_classes, in_channel=10 if args.img_type != 'rgb' else 3)
     # weights_dict = torch.load("./fcn_resnet50_coco.pth", map_location='cpu')
 
     # if num_classes != 21:
@@ -204,7 +204,7 @@ if __name__ == "__main__":
     parser.add_argument('--train_data_path', default='./HSI Dataset/train/', help='dataset')
     parser.add_argument('--val_data_path', default='./HSI Dataset/val/', help='dataset')
     parser.add_argument('--label_type', default='gray', help='label type: gray or viz')
-    parser.add_argument('--img_type', default='OSP', help='image type: OSP or PCA')
+    parser.add_argument('--img_type', default='OSP', help='image type: OSP or PCA or rgb')
     # 训练设备类型
     parser.add_argument('--device', default='cuda', help='device')
     # 检测目标类别数(不包含背景)
