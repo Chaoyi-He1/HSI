@@ -15,12 +15,12 @@ def criterion(inputs, target):
     return losses['out'] + 0.5 * losses['aux']
 
 
-def evaluate(model, data_loader, device, num_classes):
+def evaluate(model, data_loader, device, num_classes, scaler=None):
     model.eval()
     confmat = utils.ConfusionMatrix(num_classes)
     metric_logger = utils.MetricLogger(delimiter="  ")
     header = 'Test:'
-    with torch.no_grad():
+    with torch.no_grad(), torch.cuda.amp.autocast(enabled=scaler is not None):
         for image, target in metric_logger.log_every(data_loader, 100, header):
             image, target = image.to(device), target.to(device)
             output = model(image)
@@ -41,6 +41,7 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, lr_scheduler, 
 
     for image, target in metric_logger.log_every(data_loader, print_freq, header):
         image, target = image.to(device), target.to(device)
+        target = torch.squeeze(target, dim=1)
         with torch.cuda.amp.autocast(enabled=scaler is not None):
             output = model(image)
             loss = criterion(output, target)
