@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-import train_utils.distributed_utils as utils
+import distributed_utils as utils
 
 
 def criterion(inputs, target):
