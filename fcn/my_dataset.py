@@ -77,11 +77,17 @@ class HSI_Segmentation(data.Dataset):
         super(HSI_Segmentation, self).__init__()
         assert os.path.isdir(data_path), "path '{}' does not exist.".format(data_path)
         self.img_folder_list = os.listdir(data_path)
-
-        self.img_files = [os.path.join(data_path, img_folder, file)
-                          for img_folder in self.img_folder_list
-                          for file in os.listdir(os.path.join(data_path, img_folder))
-                          if os.path.splitext(file)[-1].lower() == ".mat" and img_type in file]
+        self.img_type = img_type
+        if img_type != 'rgb':
+            self.img_files = [os.path.join(data_path, img_folder, file)
+                            for img_folder in self.img_folder_list
+                            for file in os.listdir(os.path.join(data_path, img_folder))
+                            if os.path.splitext(file)[-1].lower() == ".mat" and img_type in file]
+        else:
+            self.img_files = [os.path.join(data_path, img_folder, file)
+                            for img_folder in self.img_folder_list
+                            for file in os.listdir(os.path.join(data_path, img_folder))
+                            if os.path.splitext(file)[-1].lower() == ".png" and img_type in file]
         self.img_files.sort()
         self.mask_files = [img.replace(img.split(os.sep)[-1], "label_" + label_type + ".png")
                            for img in self.img_files]
@@ -97,7 +103,8 @@ class HSI_Segmentation(data.Dataset):
         Returns:
             tuple: (image, target) where target is the image segmentation.
         """
-        img = sio.loadmat(self.img_files[index])["filtered_img"]
+        img = sio.loadmat(self.img_files[index])["filtered_img"].astype(np.float16) \
+            if self.img_type != "rgb" else Image.open(self.img_files[index])
         # img = np.ascontiguousarray(img.transpose(2, 0, 1))
         # img = (img - np.min(img)) * 255 / np.max(img)
         # img = Image.fromarray(img)
