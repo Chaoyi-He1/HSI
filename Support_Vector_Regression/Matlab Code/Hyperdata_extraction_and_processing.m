@@ -1,5 +1,5 @@
 clear
-D = 'D:\Research\HSI'; %%%%%%%%%%%%% full path to the main folder
+D = 'D:\Research\HSI\HSI Dataset'; %%%%%%%%%%%%% full path to the main folder
 S = dir(fullfile(D,'*'));
 N = setdiff({S([S.isdir]).name},{'.','..'}); % list of subfolders
 
