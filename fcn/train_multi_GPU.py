@@ -74,7 +74,7 @@ def main(args):
     print(args)
     if args.rank in [-1, 0]:
         print('Start Tensorboard with "tensorboard --logdir=runs", view at http://localhost:6006/')
-        tb_writer = SummaryWriter(comment=args.name)
+        tb_writer = SummaryWriter(comment=os.path.join("runs", args.img_type, args.name))
 
     device = torch.device(args.device)
     # segmentation nun_classes + background
@@ -169,8 +169,8 @@ def main(args):
     for epoch in range(args.start_epoch, args.epochs + args.start_epoch):
         if args.distributed:
             train_sampler.set_epoch(epoch)
-        mean_loss, lr = train_one_epoch(model, optimizer, train_data_loader, device, epoch,
-                                        lr_scheduler=lr_scheduler, print_freq=args.print_freq, scaler=scaler)
+        # mean_loss, lr = train_one_epoch(model, optimizer, train_data_loader, device, epoch,
+        #                                 lr_scheduler=lr_scheduler, print_freq=args.print_freq, scaler=scaler)
 
         confmat = evaluate(model, val_data_loader, device=device, num_classes=num_classes, scaler=scaler)
         acc_global, acc, iu = confmat.compute()
@@ -180,16 +180,16 @@ def main(args):
         # 只在主进程上进行写操作
         if args.rank in [-1, 0]:
             if tb_writer:
-                tags = ['global correct', 
-                        'average class correct/Background', 'average class correct/Car', 'average class correct/Car', 
-                        'average class correct/Road', 'average class correct/Traffic light', 'average class correct/Traffic sign', 
-                        'average class correct/Tree', 'average class correct/Building', 'average class correct/Sky', 
-                        'average class correct/Object',
-                        'IoU/Background', 'IoU/Car', 'IoU/Car', 'IoU/Road', 'IoU/Traffic light', 
-                        'IoU/Traffic sign', 'IoU/Tree', 'IoU/Building', 'IoU/Sky', 'IoU/Object',
-                        'mean IoU']
-                values = [acc_global.item() * 100] + ['{:.1f}'.format(i) for i in (acc * 100).tolist()] + \
-                         ['{:.1f}'.format(i) for i in (iu * 100).tolist()] + [iu.mean().item() * 100]
+                tags = ['global_correct', 
+                        'average_class_correct/background', 'average_class_correct/car', 'average_class_correct/human', 
+                        'average_class_correct/road', 'average_class_correct/traffic_light', 'average_class_correct/traffic_sign', 
+                        'average_class_correct/tree', 'average_class_correct/building', 'average_class_correct/sky', 
+                        'average_class_correct/object',
+                        'IoU/Background', 'IoU/Car', 'IoU/Human', 'IoU/Road', 'IoU/Traffic_light', 
+                        'IoU/Traffic_sign', 'IoU/Tree', 'IoU/Building', 'IoU/Sky', 'IoU/Object',
+                        'mean_IoU']
+                values = [acc_global.item() * 100] + [i for i in (acc * 100).tolist()] + \
+                         [i for i in (iu * 100).tolist()] + [iu.mean().item() * 100]
                 for x, tag in zip(values, tags):
                     tb_writer.add_scalar(tag, x, epoch)
             # write into txt
@@ -260,7 +260,7 @@ if __name__ == "__main__":
     # 训练过程打印信息的频率
     parser.add_argument('--print-freq', default=20, type=int, help='print frequency')
     # 文件保存地址
-    parser.add_argument('--output-dir', default='./multi_train', help='path where to save')
+    parser.add_argument('--output-dir', default='./multi_train/OSP/', help='path where to save')
     # 基于上次的训练结果接着训练
     parser.add_argument('--resume', default='', help='resume from checkpoint')
     # 不训练，仅测试
