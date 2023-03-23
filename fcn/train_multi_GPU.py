@@ -8,6 +8,8 @@ from src import fcn_resnet50
 from train_utils import train_one_epoch, evaluate, create_lr_scheduler, init_distributed_mode, save_on_master, mkdir
 from my_dataset import VOCSegmentation, HSI_Segmentation
 import transforms as T
+from torch.utils.tensorboard import SummaryWriter
+
 
 
 class SegmentationPresetTrain:
@@ -48,8 +50,8 @@ def get_transform(train):
     return SegmentationPresetTrain(base_size, crop_size) if train else SegmentationPresetEval(base_size)
 
 
-def create_model(aux, num_classes):
-    model = fcn_resnet50(aux=aux, num_classes=num_classes)
+def create_model(aux, num_classes, args):
+    model = fcn_resnet50(aux=aux, num_classes=num_classes, in_channel=10 if args.img_type != 'rgb' else 3)
     # weights_dict = torch.load("./fcn_resnet50_coco.pth", map_location='cpu')
 
     # if num_classes != 21:
@@ -70,6 +72,9 @@ def create_model(aux, num_classes):
 def main(args):
     init_distributed_mode(args)
     print(args)
+    if args.rank in [-1, 0]:
+        print('Start Tensorboard with "tensorboard --logdir=runs", view at http://localhost:6006/')
+        tb_writer = SummaryWriter(comment=os.path.join("runs", args.img_type, args.name))
 
     device = torch.device(args.device)
     # segmentation nun_classes + background
@@ -110,11 +115,15 @@ def main(args):
 
     print("Creating model")
     # create model num_classes equal background + 20 classes
-    model = create_model(aux=args.aux, num_classes=num_classes)
+    model = create_model(aux=args.aux, num_classes=num_classes, args=args)
     model.to(device)
 
     if args.sync_bn:
         model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
+    
+    if args.rank in [-1, 0] and tb_writer:
+        tb_writer.add_graph(model, torch.rand((1, 10 if args.img_type != 'rgb' else 3, 1400, 1800), 
+                                              device=device, dtype=torch.float), use_strict_trace=False)
 
     model_without_ddp = model
     if args.distributed:
@@ -157,18 +166,32 @@ def main(args):
 
     print("Start training")
     start_time = time.time()
-    for epoch in range(args.start_epoch, args.epochs):
+    for epoch in range(args.start_epoch, args.epochs + args.start_epoch):
         if args.distributed:
             train_sampler.set_epoch(epoch)
-        mean_loss, lr = train_one_epoch(model, optimizer, train_data_loader, device, epoch,
-                                        lr_scheduler=lr_scheduler, print_freq=args.print_freq, scaler=scaler)
+        # mean_loss, lr = train_one_epoch(model, optimizer, train_data_loader, device, epoch,
+        #                                 lr_scheduler=lr_scheduler, print_freq=args.print_freq, scaler=scaler)
 
         confmat = evaluate(model, val_data_loader, device=device, num_classes=num_classes, scaler=scaler)
+        acc_global, acc, iu = confmat.compute()
         val_info = str(confmat)
         print(val_info)
 
         # 只在主进程上进行写操作
         if args.rank in [-1, 0]:
+            if tb_writer:
+                tags = ['global_correct', 
+                        'average_class_correct/background', 'average_class_correct/car', 'average_class_correct/human', 
+                        'average_class_correct/road', 'average_class_correct/traffic_light', 'average_class_correct/traffic_sign', 
+                        'average_class_correct/tree', 'average_class_correct/building', 'average_class_correct/sky', 
+                        'average_class_correct/object',
+                        'IoU/Background', 'IoU/Car', 'IoU/Human', 'IoU/Road', 'IoU/Traffic_light', 
+                        'IoU/Traffic_sign', 'IoU/Tree', 'IoU/Building', 'IoU/Sky', 'IoU/Object',
+                        'mean_IoU']
+                values = [acc_global.item() * 100] + [i for i in (acc * 100).tolist()] + \
+                         [i for i in (iu * 100).tolist()] + [iu.mean().item() * 100]
+                for x, tag in zip(values, tags):
+                    tb_writer.add_scalar(tag, x, epoch)
             # write into txt
             with open(results_file, "a") as f:
                 # 记录每个epoch对应的train_loss、lr以及验证集各指标
@@ -204,13 +227,14 @@ if __name__ == "__main__":
     parser.add_argument('--train_data_path', default='./HSI Dataset/train/', help='dataset')
     parser.add_argument('--val_data_path', default='./HSI Dataset/val/', help='dataset')
     parser.add_argument('--label_type', default='gray', help='label type: gray or viz')
-    parser.add_argument('--img_type', default='OSP', help='image type: OSP or PCA')
+    parser.add_argument('--img_type', default='OSP', help='image type: OSP or PCA or rgb')
+    parser.add_argument('--name', default='', help='renames results.txt to results_name.txt if supplied')
     # 训练设备类型
     parser.add_argument('--device', default='cuda', help='device')
     # 检测目标类别数(不包含背景)
     parser.add_argument('--num-classes', default=9, type=int, help='num_classes')
     # 每块GPU上的batch_size
-    parser.add_argument('-b', '--batch-size', default=4, type=int,
+    parser.add_argument('-b', '--batch-size', default=1, type=int,
                         help='images per gpu, the total batch size is $NGPU x batch_size')
     parser.add_argument("--aux", default=False, type=bool, help="auxilier loss")
     # 指定接着从哪个epoch数开始训练
@@ -236,9 +260,9 @@ if __name__ == "__main__":
     # 训练过程打印信息的频率
     parser.add_argument('--print-freq', default=20, type=int, help='print frequency')
     # 文件保存地址
-    parser.add_argument('--output-dir', default='./multi_train', help='path where to save')
+    parser.add_argument('--output-dir', default='./multi_train/OSP/', help='path where to save')
     # 基于上次的训练结果接着训练
-    parser.add_argument('--resume', default='./multi_train/model_111.pth', help='resume from checkpoint')
+    parser.add_argument('--resume', default='', help='resume from checkpoint')
     # 不训练，仅测试
     parser.add_argument(
         "--test-only",
