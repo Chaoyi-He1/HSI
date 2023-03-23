@@ -121,7 +121,7 @@ class FCNHead(nn.Sequential):
 def fcn_resnet50(aux, num_classes=21, pretrain_backbone=False, in_channel=10):
     # 'resnet50_imagenet': 'https://download.pytorch.org/models/resnet50-0676ba61.pth'
     # 'fcn_resnet50_coco': 'https://download.pytorch.org/models/fcn_resnet50_coco-1167a1af.pth'
-    backbone = resnet50(replace_stride_with_dilation=[False, True, True], in_channel=10)
+    backbone = resnet50(replace_stride_with_dilation=[False, True, True], in_channel=in_channel)
 
     if pretrain_backbone:
         # 载入resnet50 backbone预训练权重

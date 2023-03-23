@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-import distributed_utils as utils
+import train_utils.distributed_utils as utils
 
 
 def criterion(inputs, target):
@@ -29,7 +29,6 @@ def evaluate(model, data_loader, device, num_classes, scaler=None):
             confmat.update(target.flatten(), output.argmax(1).flatten())
 
         confmat.reduce_from_all_processes()
-
     return confmat
 
 
