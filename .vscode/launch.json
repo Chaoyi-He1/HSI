@@ -14,7 +14,7 @@
                 "--nproc_per_node", "2", 
                 "--use_env",
                 "./fcn/train_multi_GPU.py",
-                "--img_type", "rgb"
+                // "--img_type", "rgb"
             ]
         }
     ]
