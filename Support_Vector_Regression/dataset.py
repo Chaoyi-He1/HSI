@@ -42,9 +42,6 @@ class HSI_Segmentation(Dataset):
         """
         img = sio.loadmat(self.img_files[index])["filtered_img"].astype(np.float16) \
             if self.img_type != "rgb" else Image.open(self.img_files[index])
-        # img = np.ascontiguousarray(img.transpose(2, 0, 1))
-        # img = (img - np.min(img)) * 255 / np.max(img)
-        # img = Image.fromarray(img)
 
         if self.transforms is not None:
             img, target = self.transforms(img)
