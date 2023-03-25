@@ -6,7 +6,7 @@ import distribute_utils as utils
 
 def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, lr_scheduler,
                     data_loader: Iterable, optimizer: torch.optim.Optimizer,
-                    device: torch.device, epoch: int, print_freq: int, scaler=None):
+                    device: torch.device, epoch: int, print_freq: int, l1_coeff: int, scaler=None):
     lr = None
     model.train()
     criterion.train()
@@ -19,6 +19,11 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, lr_sched
         with torch.cuda.amp.autocast(enabled=scaler is not None):
             outputs = model(samples)
             loss = criterion(outputs, targets)
+            l1_loss = 0.0
+            for param in model.parameters():
+                l1_loss += torch.sum(torch.abs(param))
+            # Add L1 regularization loss to the total loss
+            loss += l1_coeff * l1_loss
 
         if not torch.isfinite(loss):
             print("Loss is {}, stopping training".format(loss))

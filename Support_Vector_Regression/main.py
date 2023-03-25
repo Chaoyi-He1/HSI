@@ -36,8 +36,8 @@ def create_lr_scheduler(optimizer,
 
 def get_args_parser():
     parser = argparse.ArgumentParser('Set transformer detector', add_help=False)
-    parser.add_argument('--lr', default=1e-4, type=float)
-    parser.add_argument('--lf', default=0.01, type=float)
+    parser.add_argument('--lr', default=1e-3, type=float)
+    parser.add_argument('--l1_coeff', default=1e-6, type=float)
     parser.add_argument('--batch_size', default=48, type=int)
 
     parser.add_argument('--start_epoch', default=0, type=int, help='start epoch')
@@ -146,7 +146,7 @@ def main(args, cfg):
             train_sampler.set_epoch(epoch)
         mean_loss, lr = train_one_epoch(model=model, criterion=criterion, lr_scheduler=lr_scheduler,
                                         data_loader=train_data_loader, optimizer=optimizer, device=device,
-                                        epoch=epoch, print_freq=args.print_freq, scaler=scaler)
+                                        epoch=epoch, print_freq=args.print_freq, l1_coeff=args.l1_coeff, scaler=scaler)
 
         mean_loss_eval = evaluate(model=model, criterion=criterion, device=device, data_loader=val_data_loader,
                                   print_freq=args.print_freq, scaler=scaler)
