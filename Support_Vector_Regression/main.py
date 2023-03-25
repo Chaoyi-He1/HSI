@@ -1,7 +1,5 @@
 import argparse
-
 import yaml
-
 from distribute_utils import *
 from torch.utils.tensorboard import SummaryWriter
 from model import *
