@@ -38,16 +38,15 @@ def get_args_parser():
     parser = argparse.ArgumentParser('Set transformer detector', add_help=False)
     parser.add_argument('--lr', default=1e-3, type=float)
     parser.add_argument('--l1_coeff', default=1e-6, type=float)
-    parser.add_argument('--batch_size', default=48, type=int)
+    parser.add_argument('--batch_size', default=1, type=int)
 
-    parser.add_argument('--start_epoch', default=0, type=int, help='start epoch')
     parser.add_argument('--epochs', default=300, type=int)
     parser.add_argument('--clip_max_norm', default=0.4, type=float, help='gradient clipping max norm')
     parser.add_argument('--device', default='cuda', help='device id (i.e. 0 or 0,1 or cpu)')
     parser.add_argument('--name', default='', help='renames results.txt to results_name.txt if supplied')
 
     # dataset parameters
-    parser.add_argument('--hyp', type=str, default='cfg.yaml', help='hyper parameters path')
+    parser.add_argument('--hyp', type=str, default='./Support_Vector_Regression/cfg.yaml', help='hyper parameters path')
     parser.add_argument('--train_data_path', default='/data2/chaoyi/HSI Dataset/train', help='dataset')
     parser.add_argument('--val_data_path', default='/data2/chaoyi/HSI Dataset/val/', help='dataset')
     parser.add_argument('--filter_path', default='./Matlab Code/EC_filter.mat', help='label type: gray or viz')
@@ -99,12 +98,12 @@ def main(args, cfg):
 
     train_data_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=args.batch_size,
-        sampler=train_sampler, num_workers=args.workers,
+        sampler=train_sampler, num_workers=args.num_workers,
         collate_fn=train_dataset.collate_fn, drop_last=True)
 
     val_data_loader = torch.utils.data.DataLoader(
         val_dataset, batch_size=1,
-        sampler=test_sampler, num_workers=args.workers,
+        sampler=test_sampler, num_workers=args.num_workers,
         collate_fn=train_dataset.collate_fn)
 
     print("Creating model")
@@ -117,11 +116,10 @@ def main(args, cfg):
         model_without_ddp = model.module
 
     params_to_optimize = [
-        {"params": [p for p in model_without_ddp.backbone.parameters() if p.requires_grad]},
-        {"params": [p for p in model_without_ddp.classifier.parameters() if p.requires_grad]},
+        {"params": [p for p in model_without_ddp.parameters() if p.requires_grad]},
     ]
     optimizer = torch.optim.Adam(
-        params_to_optimize, lr=args.lr, weight_decay=args.weight_decay)
+        params_to_optimize, lr=args.lr)
     criterion = nn.MSELoss().to(device)
     scaler = torch.cuda.amp.GradScaler() if args.amp else None
     lr_scheduler = create_lr_scheduler(optimizer, len(train_data_loader), args.epochs, warmup=True)

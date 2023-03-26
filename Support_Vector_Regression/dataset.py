@@ -38,13 +38,13 @@ class HSI_Segmentation(Dataset):
             index (int): Index
 
         Returns:
-            tuple: (image, target) where target is the image segmentation.
+            tuple: (image, filter) where target is the image segmentation.
         """
-        img = sio.loadmat(self.img_files[index])["filtered_img"].astype(np.float16) \
+        img = sio.loadmat(self.img_files[index])["data"].astype(np.float16) \
             if self.img_type != "rgb" else Image.open(self.img_files[index])
 
         if self.transforms is not None:
-            img, target = self.transforms(img)
+            img = self.transforms(img)
 
         return img, self.filters
 
