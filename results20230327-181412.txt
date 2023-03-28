@@ -1,0 +1,40 @@
+[epoch: 0]
+train_loss: 0.0461
+lr: 0.001000
+val mean loss0.008515526198179406
+
+[epoch: 1]
+train_loss: 0.0167
+lr: 0.000997
+val mean loss0.007782571634058566
+
+[epoch: 2]
+train_loss: 0.0094
+lr: 0.000994
+val mean loss0.007812938796739806
+
+[epoch: 3]
+train_loss: 0.0089
+lr: 0.000991
+val mean loss0.008126822943963549
+
+[epoch: 4]
+train_loss: 0.0086
+lr: 0.000988
+val mean loss0.007952694164808182
+
+[epoch: 5]
+train_loss: 0.0084
+lr: 0.000985
+val mean loss0.008074088076896527
+
+[epoch: 6]
+train_loss: 0.0085
+lr: 0.000982
+val mean loss0.008144494762425037
+
+[epoch: 7]
+train_loss: 0.0087
+lr: 0.000979
+val mean loss0.007983077831073281
+

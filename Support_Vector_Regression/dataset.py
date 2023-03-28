@@ -5,6 +5,7 @@ import scipy.io as sio
 import numpy as np
 from pathlib import Path
 from torch.utils.data import Dataset
+import random
 
 
 class HSI_Segmentation(Dataset):
@@ -28,7 +29,8 @@ class HSI_Segmentation(Dataset):
 
         self.img_files.sort()
         self.filter_file = filter_path
-        self.filters = sio.loadmat(self.filter_file)["responsivity"].astype(np.float)  # shape: (89, 71)
+        self.filters = sio.loadmat(self.filter_file)["responsivity"].astype(np.float16)  # shape: (89, 71)
+        self.filters = torch.as_tensor(self.filters)
 
         self.transforms = transforms
 
@@ -54,5 +56,13 @@ class HSI_Segmentation(Dataset):
     @staticmethod
     def collate_fn(batch):
         images, filters = list(zip(*batch))
-        flattened_imgs = images.permute(0, 2, 3, 1).flatten(0, 2).contiguous()
-        return flattened_imgs, filters.repeat(flattened_imgs.shape[0], 1, 1)
+        lst = []
+        for mat in images:
+            tensor_list = mat.permute(1, 2, 0).flatten(0, 1).contiguous().split(1) 
+            for r in tensor_list:
+                lst.append(r.squeeze())
+        random_elements = random.sample(lst, 100000)
+        flattened_imgs = torch.stack(random_elements)
+        filters = torch.stack([filters[0]] * len(flattened_imgs))
+
+        return flattened_imgs, filters

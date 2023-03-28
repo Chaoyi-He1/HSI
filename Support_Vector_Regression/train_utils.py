@@ -13,12 +13,12 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, lr_sched
     metric_logger = utils.MetricLogger(delimiter="  ")
     metric_logger.add_meter('lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
     header = 'Epoch: [{}]'.format(epoch)
-    for samples, targets in metric_logger.log_every(data_loader, print_freq, header):
+    for samples, filters in metric_logger.log_every(data_loader, print_freq, header):
         samples = samples.to(device)
-        targets = targets.to(device)
+        filters = filters.to(device)
         with torch.cuda.amp.autocast(enabled=scaler is not None):
-            outputs = model(samples)
-            loss = criterion(outputs, targets)
+            outputs = model(filters)
+            loss = criterion(outputs, samples)
             l1_loss = 0.0
             for param in model.parameters():
                 l1_loss += torch.sum(torch.abs(param))
@@ -42,7 +42,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, lr_sched
         lr_scheduler.step()
 
         lr = optimizer.param_groups[0]["lr"]
-        metric_logger.update(loss=loss.item(), lr=lr)
+        metric_logger.update(loss=loss.item(), lr=lr, l1_norm=l1_loss.item())
 
     return metric_logger.meters["loss"].global_avg, lr
 
@@ -53,10 +53,10 @@ def evaluate(model: torch.nn.Module, criterion: torch.nn.Module, device: torch.d
     metric_logger = utils.MetricLogger(delimiter="  ")
     header = 'Test:'
     with torch.no_grad(), torch.cuda.amp.autocast(enabled=scaler is not None):
-        for image, target in metric_logger.log_every(data_loader, print_freq, header):
-            image, target = image.to(device), target.to(device)
-            output = model(image)
-            loss = criterion(output, target)
+        for image, filters in metric_logger.log_every(data_loader, print_freq, header):
+            image, filters = image.to(device), filters.to(device)
+            output = model(filters)
+            loss = criterion(output, image)
 
             metric_logger.update(loss=loss.item())
     return metric_logger.meters["loss"].global_avg

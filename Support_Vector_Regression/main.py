@@ -37,7 +37,7 @@ def create_lr_scheduler(optimizer,
 def get_args_parser():
     parser = argparse.ArgumentParser('Set transformer detector', add_help=False)
     parser.add_argument('--lr', default=1e-3, type=float)
-    parser.add_argument('--l1_coeff', default=1e-6, type=float)
+    parser.add_argument('--l1_coeff', default=1e-2, type=float)
     parser.add_argument('--batch_size', default=1, type=int)
 
     parser.add_argument('--epochs', default=300, type=int)
@@ -59,7 +59,7 @@ def get_args_parser():
                         help='start epoch')
     parser.add_argument('--eval', action='store_true')
     parser.add_argument('--num_workers', default=8, type=int)
-    parser.add_argument('--print-freq', default=1000, type=int, help='print frequency')
+    parser.add_argument('--print-freq', default=10, type=int, help='print frequency')
 
     # distributed training parameters
     parser.add_argument('--savebest', type=bool, default=False, help='only save best checkpoint')
@@ -104,7 +104,7 @@ def main(args, cfg):
     val_data_loader = torch.utils.data.DataLoader(
         val_dataset, batch_size=1,
         sampler=test_sampler, num_workers=args.num_workers,
-        collate_fn=train_dataset.collate_fn)
+        collate_fn=val_dataset.collate_fn)
 
     print("Creating model")
     # create model num_classes equal background + 20 classes
