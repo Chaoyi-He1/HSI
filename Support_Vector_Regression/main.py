@@ -37,7 +37,7 @@ def create_lr_scheduler(optimizer,
 def get_args_parser():
     parser = argparse.ArgumentParser('Set transformer detector', add_help=False)
     parser.add_argument('--lr', default=1e-3, type=float)
-    parser.add_argument('--l1_coeff', default=1e-2, type=float)
+    parser.add_argument('--l1_coeff', default=1e-3, type=float)
     parser.add_argument('--batch_size', default=1, type=int)
 
     parser.add_argument('--epochs', default=300, type=int)

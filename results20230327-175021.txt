@@ -1,5 +1,0 @@
-[epoch: 0]
-train_loss: 0.0578
-lr: 0.001000
-val mean loss0.008368054980083424
-
