@@ -224,8 +224,8 @@ if __name__ == "__main__":
         description=__doc__)
 
     # 训练文件的根目录(VOCdevkit)
-    parser.add_argument('--train_data_path', default='./HSI Dataset/train/', help='dataset')
-    parser.add_argument('--val_data_path', default='./HSI Dataset/val/', help='dataset')
+    parser.add_argument('--train_data_path', default='./HSI Dataset/V2/train/', help='dataset')
+    parser.add_argument('--val_data_path', default='./HSI Dataset/V2/val/', help='dataset')
     parser.add_argument('--label_type', default='gray', help='label type: gray or viz')
     parser.add_argument('--img_type', default='OSP', help='image type: OSP or PCA or rgb')
     parser.add_argument('--name', default='', help='renames results.txt to results_name.txt if supplied')
@@ -234,7 +234,7 @@ if __name__ == "__main__":
     # 检测目标类别数(不包含背景)
     parser.add_argument('--num-classes', default=9, type=int, help='num_classes')
     # 每块GPU上的batch_size
-    parser.add_argument('-b', '--batch-size', default=1, type=int,
+    parser.add_argument('-b', '--batch-size', default=2, type=int,
                         help='images per gpu, the total batch size is $NGPU x batch_size')
     parser.add_argument("--aux", default=False, type=bool, help="auxilier loss")
     # 指定接着从哪个epoch数开始训练
@@ -260,7 +260,7 @@ if __name__ == "__main__":
     # 训练过程打印信息的频率
     parser.add_argument('--print-freq', default=20, type=int, help='print frequency')
     # 文件保存地址
-    parser.add_argument('--output-dir', default='./multi_train/OSP/', help='path where to save')
+    parser.add_argument('--output-dir', default='./fcn/multi_train/OSP/', help='path where to save')
     # 基于上次的训练结果接着训练
     parser.add_argument('--resume', default='', help='resume from checkpoint')
     # 不训练，仅测试
