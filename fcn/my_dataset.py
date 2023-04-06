@@ -88,13 +88,16 @@ class HSI_Segmentation(data.Dataset):
             self.img_files = [os.path.join(data_path, img_folder, file)
                               for img_folder in self.img_folder_list
                               for file in os.listdir(os.path.join(data_path, img_folder))
-                              if os.path.splitext(file)[-1].lower() == ".png" and img_type in file]
+                              if os.path.splitext(file)[-1].lower() == ".jpg" and img_type in file]
             
         self.img_files.sort()
-        self.mask_files = [img.replace(img.split(os.sep)[-1], "rgb"
+        rgb = "rgb" if img_type != 'rgb' else ''
+        self.mask_files = [img.replace(img.split(os.sep)[-1], rgb
                                        + os.path.splitext(os.path.basename(img))[0].replace("_OSP10channel", "")
                                        + "_gray.png") for img in self.img_files]
-
+        # self.mask_files = [img.replace(img.split(os.sep)[-1], "label_" + label_type
+        #                                + ".png") for img in self.img_files]
+        
         assert (len(self.img_files) == len(self.mask_files))
         self.transforms = transforms
 

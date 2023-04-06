@@ -44,8 +44,8 @@ class SegmentationPresetEval:
 
 
 def get_transform(train):
-    base_size = 1800
-    crop_size = 1800
+    base_size = 1400
+    crop_size = 1400
 
     return SegmentationPresetTrain(base_size, crop_size) if train else SegmentationPresetEval(base_size)
 
@@ -232,9 +232,9 @@ if __name__ == "__main__":
     # 训练设备类型
     parser.add_argument('--device', default='cuda', help='device')
     # 检测目标类别数(不包含背景)
-    parser.add_argument('--num-classes', default=9, type=int, help='num_classes')
+    parser.add_argument('--num-classes', default=19, type=int, help='num_classes')
     # 每块GPU上的batch_size
-    parser.add_argument('-b', '--batch-size', default=2, type=int,
+    parser.add_argument('-b', '--batch-size', default=1, type=int,
                         help='images per gpu, the total batch size is $NGPU x batch_size')
     parser.add_argument("--aux", default=False, type=bool, help="auxilier loss")
     # 指定接着从哪个epoch数开始训练

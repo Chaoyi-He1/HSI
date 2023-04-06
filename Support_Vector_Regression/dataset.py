@@ -31,6 +31,8 @@ class HSI_Segmentation(Dataset):
         self.filter_file = filter_path
         self.filters = sio.loadmat(self.filter_file)["responsivity"].astype(np.float16)  # shape: (89, 71)
         self.filters = torch.as_tensor(self.filters)
+        self.origin_img_files = [img_file.replace("ALL71channel", "raw")
+                                 for img_file in self.img_files]
 
         self.transforms = transforms
 
@@ -44,25 +46,31 @@ class HSI_Segmentation(Dataset):
         """
         img = sio.loadmat(self.img_files[index])["data"].astype(np.float16) \
             if self.img_type != "rgb" else Image.open(self.img_files[index])
-
+        raw = sio.loadmat(self.origin_img_files[index])["data"].astype(np.float16) \
+            if self.img_type != "rgb" else Image.open(self.origin_img_files[index])
         if self.transforms is not None:
             img = self.transforms(img)
+            raw = self.transforms(raw)
 
-        return img, self.filters
+        return img, raw
 
     def __len__(self):
         return len(self.img_files)
 
     @staticmethod
     def collate_fn(batch):
-        images, filters = list(zip(*batch))
-        lst = []
-        for mat in images:
-            tensor_list = mat.permute(1, 2, 0).flatten(0, 1).contiguous().split(1) 
-            for r in tensor_list:
-                lst.append(r.squeeze())
-        random_elements = random.sample(lst, 100000)
-        flattened_imgs = torch.stack(random_elements)
-        filters = torch.stack([filters[0]] * len(flattened_imgs))
+        pairs = list(zip(*batch))
+        images, raw_imgs = random.sample(pairs, 100000)
+        lst_i = []
+        lst_r = []
+        for img, raw in zip(images, raw_imgs):
+            list_img = img.permute(1, 2, 0).flatten(0, 1).contiguous().split(1) 
+            list_raw = raw.permute(1, 2, 0).flatten(0, 1).contiguous().split(1) 
+            for i, r in zip(list_img, list_raw):
+                lst_i.append(i.squeeze())
+                lst_r.append(r.squeeze())
+        
+        flattened_imgs = torch.stack(lst_i)
+        flattened_raws = torch.stack(lst_r)
 
-        return flattened_imgs, filters
+        return flattened_imgs, flattened_raws
