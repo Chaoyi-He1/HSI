@@ -9,7 +9,7 @@ import random
 
 
 class HSI_Segmentation(Dataset):
-    def __init__(self, data_path: str = "", filter_path: str = "", img_type: str = "raw", transforms=None):
+    def __init__(self, data_path: str = "", filter_path: str = "", img_type: str = "raw", transforms=None, train=True):
         """
         Parameters:
             data_path: the path of the "HSI Dataset folder"
@@ -28,6 +28,7 @@ class HSI_Segmentation(Dataset):
                           if os.path.splitext(file)[-1].lower() == ".mat" and img_type in file]
 
         self.img_files.sort()
+        self.img_files = self.img_files[:500] if train else self.img_files[500:]
         self.filter_file = filter_path
         self.filters = sio.loadmat(self.filter_file)["responsivity"].astype(np.float16)  # shape: (89, 71)
         self.filters = torch.as_tensor(self.filters)
@@ -35,6 +36,21 @@ class HSI_Segmentation(Dataset):
                                  for img_file in self.img_files]
 
         self.transforms = transforms
+
+        # Check if all files exist
+        all_exist = True
+        for path in self.img_files:
+            if not os.path.isfile(path):
+                all_exist = False
+                assert all_exist, "path '{}' does not exist.".format(path)
+                break
+        
+        all_exist = True
+        for path in self.origin_img_files:
+            if not os.path.isfile(path):
+                all_exist = False
+                assert all_exist, "path '{}' does not exist.".format(path)
+                break
 
     def __getitem__(self, index):
         """
@@ -44,8 +60,10 @@ class HSI_Segmentation(Dataset):
         Returns:
             tuple: (image, filter) where target is the image segmentation.
         """
-        img = sio.loadmat(self.img_files[index])["data"].astype(np.float16) \
+        assert os.path.isfile(self.img_files[index]), "path '{}' does not exist.".format(self.img_files[index])
+        img = sio.loadmat(self.img_files[index])["filtered_img"].astype(np.float16) \
             if self.img_type != "rgb" else Image.open(self.img_files[index])
+        
         raw = sio.loadmat(self.origin_img_files[index])["data"].astype(np.float16) \
             if self.img_type != "rgb" else Image.open(self.origin_img_files[index])
         if self.transforms is not None:
@@ -59,17 +77,19 @@ class HSI_Segmentation(Dataset):
 
     @staticmethod
     def collate_fn(batch):
-        pairs = list(zip(*batch))
-        images, raw_imgs = random.sample(pairs, 100000)
+        images, raw_imgs = list(zip(*batch))
         lst_i = []
         lst_r = []
         for img, raw in zip(images, raw_imgs):
-            list_img = img.permute(1, 2, 0).flatten(0, 1).contiguous().split(1) 
-            list_raw = raw.permute(1, 2, 0).flatten(0, 1).contiguous().split(1) 
-            for i, r in zip(list_img, list_raw):
-                lst_i.append(i.squeeze())
-                lst_r.append(r.squeeze())
-        
+            lst_i.append(img.permute(1, 2, 0).contiguous())
+            lst_r.append(raw.permute(1, 2, 0).contiguous())
+            # list_img = img.permute(1, 2, 0).flatten(0, 1).contiguous().split(1) 
+            # list_raw = raw.permute(1, 2, 0).flatten(0, 1).contiguous().split(1) 
+            # for i, r in zip(list_img, list_raw):
+            #     lst_i.append(i.squeeze())
+            #     lst_r.append(r.squeeze())
+        # pairs = random.sample(list(zip(lst_i, lst_r)), 100000)
+        # lst_i, lst_r = zip(*pairs)
         flattened_imgs = torch.stack(lst_i)
         flattened_raws = torch.stack(lst_r)
 

@@ -13,12 +13,12 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, lr_sched
     metric_logger = utils.MetricLogger(delimiter="  ")
     metric_logger.add_meter('lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
     header = 'Epoch: [{}]'.format(epoch)
-    for samples, filters in metric_logger.log_every(data_loader, print_freq, header):
+    for samples, raws in metric_logger.log_every(data_loader, print_freq, header):
         samples = samples.to(device)
-        filters = filters.to(device)
+        raws = raws.to(device)
         with torch.cuda.amp.autocast(enabled=scaler is not None):
-            outputs = model(filters)
-            loss = criterion(outputs, samples)
+            outputs = model(samples)
+            loss = criterion(outputs, raws)
             l1_loss = 0.0
             for param in model.parameters():
                 l1_loss += torch.sum(torch.abs(param))
@@ -53,10 +53,10 @@ def evaluate(model: torch.nn.Module, criterion: torch.nn.Module, device: torch.d
     metric_logger = utils.MetricLogger(delimiter="  ")
     header = 'Test:'
     with torch.no_grad(), torch.cuda.amp.autocast(enabled=scaler is not None):
-        for image, filters in metric_logger.log_every(data_loader, print_freq, header):
-            image, filters = image.to(device), filters.to(device)
-            output = model(filters)
-            loss = criterion(output, image)
+        for image, raws in metric_logger.log_every(data_loader, print_freq, header):
+            image, raws = image.to(device), raws.to(device)
+            output = model(image)
+            loss = criterion(output, raws)
 
             metric_logger.update(loss=loss.item())
     return metric_logger.meters["loss"].global_avg

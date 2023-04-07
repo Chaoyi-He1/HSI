@@ -10,4 +10,4 @@ class SVR_net(nn.Module):
         self.linear = nn.Linear(in_features=cfg["num_in_feature"], out_features=cfg["num_out_feature"], bias=cfg["bias"])
 
     def forward(self, inputs: Tensor):
-        return self.linear(inputs).squeeze()
+        return self.linear(inputs)

@@ -38,7 +38,7 @@ def get_args_parser():
     parser = argparse.ArgumentParser('Set transformer detector', add_help=False)
     parser.add_argument('--lr', default=1e-3, type=float)
     parser.add_argument('--l1_coeff', default=1e-3, type=float)
-    parser.add_argument('--batch_size', default=1, type=int)
+    parser.add_argument('--batch_size', default=4, type=int)
 
     parser.add_argument('--epochs', default=300, type=int)
     parser.add_argument('--clip_max_norm', default=0.4, type=float, help='gradient clipping max norm')
@@ -47,10 +47,10 @@ def get_args_parser():
 
     # dataset parameters
     parser.add_argument('--hyp', type=str, default='./Support_Vector_Regression/cfg.yaml', help='hyper parameters path')
-    parser.add_argument('--train_data_path', default='/data2/chaoyi/HSI Dataset/train', help='dataset')
-    parser.add_argument('--val_data_path', default='/data2/chaoyi/HSI Dataset/val/', help='dataset')
+    parser.add_argument('--train_data_path', default='/data2/chaoyi/HSI Dataset/V2/train/', help='dataset')
+    parser.add_argument('--val_data_path', default='/data2/chaoyi/HSI Dataset/V2/train/', help='dataset')
     parser.add_argument('--filter_path', default='./Matlab Code/EC_filter.mat', help='label type: gray or viz')
-    parser.add_argument('--img_type', default='raw', help='image type: OSP or PCA or rgb or raw')
+    parser.add_argument('--img_type', default='ALL', help='image type: OSP or PCA or rgb or raw')
     parser.add_argument('--output_dir', default='./SVR_weights/',
                         help='path where to save, empty for no saving')
     parser.add_argument('--seed', default=42, type=int)
@@ -87,7 +87,7 @@ def main(args, cfg):
     val_dataset = HSI_Segmentation(data_path=args.val_data_path,
                                    filter_path=args.filter_path,
                                    img_type=args.img_type,
-                                   transforms=transforms.ToTensor())
+                                   transforms=transforms.ToTensor(), train=False)
     print("Creating data loaders")
     if args.distributed:
         train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
