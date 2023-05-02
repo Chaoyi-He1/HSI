@@ -6,6 +6,7 @@ from model import *
 from dataset import *
 import os
 import numpy as np
+import pandas as pd
 from train_utils import *
 from torchvision import transforms
 
@@ -40,7 +41,7 @@ def get_args_parser():
     parser.add_argument('--l1_coeff', default=1e-3, type=float)
     parser.add_argument('--batch_size', default=4, type=int)
 
-    parser.add_argument('--epochs', default=300, type=int)
+    parser.add_argument('--epochs', default=1, type=int)
     parser.add_argument('--clip_max_norm', default=0.4, type=float, help='gradient clipping max norm')
     parser.add_argument('--device', default='cuda', help='device id (i.e. 0 or 0,1 or cpu)')
     parser.add_argument('--name', default='', help='renames results.txt to results_name.txt if supplied')
@@ -54,7 +55,7 @@ def get_args_parser():
     parser.add_argument('--output_dir', default='./SVR_weights/',
                         help='path where to save, empty for no saving')
     parser.add_argument('--seed', default=42, type=int)
-    parser.add_argument('--resume', default='', help='resume from checkpoint')
+    parser.add_argument('--resume', default='./SVR_weights/model_30.pth', help='resume from checkpoint')
     parser.add_argument('--start_epoch', default=0, type=int, metavar='N',
                         help='start epoch')
     parser.add_argument('--eval', action='store_true')
@@ -135,6 +136,11 @@ def main(args, cfg):
         args.start_epoch = checkpoint['epoch'] + 1
         if args.amp:
             scaler.load_state_dict(checkpoint["scaler"])
+
+        for params in model_without_ddp.state_dict():
+            weight = model_without_ddp.state_dict()[params].cpu().numpy()
+            file_name = args.resume.replace('.pth', '') + '_%s.csv' % (params.replace(".", "_"))
+            pd.DataFrame(weight).to_csv(file_name, header=False, index=False)
 
     print("Start training")
     start_time = time.time()

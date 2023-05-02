@@ -1,0 +1,210 @@
+[epoch: 0]
+train_loss: 0.3789
+lr: 0.001000
+val mean loss0.0038209744066429827
+
+[epoch: 1]
+train_loss: 0.1677
+lr: 0.000997
+val mean loss0.0010050967150843691
+
+[epoch: 2]
+train_loss: 0.0506
+lr: 0.000994
+val mean loss0.00040973615048662377
+
+[epoch: 3]
+train_loss: 0.0162
+lr: 0.000991
+val mean loss0.0004165653373907484
+
+[epoch: 4]
+train_loss: 0.0056
+lr: 0.000988
+val mean loss0.0004344444000108214
+
+[epoch: 5]
+train_loss: 0.0023
+lr: 0.000985
+val mean loss0.00047819095119608633
+
+[epoch: 6]
+train_loss: 0.0014
+lr: 0.000982
+val mean loss0.0005334273452248014
+
+[epoch: 7]
+train_loss: 0.0012
+lr: 0.000979
+val mean loss0.000550790170439211
+
+[epoch: 8]
+train_loss: 0.0012
+lr: 0.000976
+val mean loss0.000540982790725748
+
+[epoch: 9]
+train_loss: 0.0011
+lr: 0.000973
+val mean loss0.000458079264191568
+
+[epoch: 10]
+train_loss: 0.0011
+lr: 0.000970
+val mean loss0.0005286740739308328
+
+[epoch: 11]
+train_loss: 0.0011
+lr: 0.000967
+val mean loss0.0005545815927984382
+
+[epoch: 12]
+train_loss: 0.0011
+lr: 0.000964
+val mean loss0.0005114947768116498
+
+[epoch: 13]
+train_loss: 0.0011
+lr: 0.000961
+val mean loss0.0005445907483870262
+
+[epoch: 14]
+train_loss: 0.0011
+lr: 0.000958
+val mean loss0.0004777904729193184
+
+[epoch: 15]
+train_loss: 0.0011
+lr: 0.000955
+val mean loss0.0004847500950660645
+
+[epoch: 16]
+train_loss: 0.0011
+lr: 0.000952
+val mean loss0.0005123711411125531
+
+[epoch: 17]
+train_loss: 0.0011
+lr: 0.000949
+val mean loss0.0005893875720805506
+
+[epoch: 18]
+train_loss: 0.0011
+lr: 0.000946
+val mean loss0.0005807206006950734
+
+[epoch: 19]
+train_loss: 0.0011
+lr: 0.000943
+val mean loss0.0005804582117634509
+
+[epoch: 20]
+train_loss: 0.0011
+lr: 0.000940
+val mean loss0.0004319755404492173
+
+[epoch: 21]
+train_loss: 0.0011
+lr: 0.000937
+val mean loss0.0005954647926231061
+
+[epoch: 22]
+train_loss: 0.0011
+lr: 0.000934
+val mean loss0.0005920119570489008
+
+[epoch: 23]
+train_loss: 0.0011
+lr: 0.000930
+val mean loss0.0005359517921943324
+
+[epoch: 24]
+train_loss: 0.0011
+lr: 0.000927
+val mean loss0.0005571336933866365
+
+[epoch: 25]
+train_loss: 0.0011
+lr: 0.000924
+val mean loss0.0005648246822672193
+
+[epoch: 26]
+train_loss: 0.0012
+lr: 0.000921
+val mean loss0.000510698900850432
+
+[epoch: 27]
+train_loss: 0.0012
+lr: 0.000918
+val mean loss0.0005180305149229293
+
+[epoch: 28]
+train_loss: 0.0012
+lr: 0.000915
+val mean loss0.000550131760889229
+
+[epoch: 29]
+train_loss: 0.0011
+lr: 0.000912
+val mean loss0.000499712639491538
+
+[epoch: 30]
+train_loss: 0.0012
+lr: 0.000909
+val mean loss0.0005326902698101009
+
+[epoch: 31]
+train_loss: 0.0011
+lr: 0.000906
+val mean loss0.0004425029684423382
+
+[epoch: 32]
+train_loss: 0.0011
+lr: 0.000903
+val mean loss0.0005046581814910026
+
+[epoch: 33]
+train_loss: 0.0011
+lr: 0.000900
+val mean loss0.00041454147495957074
+
+[epoch: 34]
+train_loss: 0.0011
+lr: 0.000897
+val mean loss0.0004310701056493389
+
+[epoch: 35]
+train_loss: 0.0011
+lr: 0.000894
+val mean loss0.0004687476195230984
+
+[epoch: 36]
+train_loss: 0.0011
+lr: 0.000891
+val mean loss0.0004562491347222341
+
+[epoch: 37]
+train_loss: 0.0011
+lr: 0.000888
+val mean loss0.00044169699772207954
+
+[epoch: 38]
+train_loss: 0.0011
+lr: 0.000885
+val mean loss0.00055260602765794
+
+[epoch: 39]
+train_loss: 0.0011
+lr: 0.000882
+val mean loss0.0005312520731927129
+
+[epoch: 40]
+train_loss: 0.0012
+lr: 0.000879
+val mean loss0.0004679324717002161
+
+[epoch: 41]
+train_loss: 0.0010
+lr: 0.000876
+val mean loss0.0005203669134461561
+

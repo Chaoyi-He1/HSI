@@ -11,7 +11,6 @@ import transforms as T
 from torch.utils.tensorboard import SummaryWriter
 
 
-
 class SegmentationPresetTrain:
     def __init__(self, base_size, crop_size, hflip_prob=0.5, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
         min_size = int(0.8 * base_size)
@@ -224,8 +223,8 @@ if __name__ == "__main__":
         description=__doc__)
 
     # 训练文件的根目录(VOCdevkit)
-    parser.add_argument('--train_data_path', default='./HSI Dataset/V2/train/', help='dataset')
-    parser.add_argument('--val_data_path', default='./HSI Dataset/V2/val/', help='dataset')
+    parser.add_argument('--train_data_path', default='/data2/chaoyi/HSI Dataset/V2/train/', help='dataset')
+    parser.add_argument('--val_data_path', default='/data2/chaoyi/HSI Dataset/V2/val/', help='dataset')
     parser.add_argument('--label_type', default='gray', help='label type: gray or viz')
     parser.add_argument('--img_type', default='OSP', help='image type: OSP or PCA or rgb')
     parser.add_argument('--name', default='', help='renames results.txt to results_name.txt if supplied')

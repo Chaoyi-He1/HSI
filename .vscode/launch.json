@@ -13,9 +13,9 @@
             "args": [
                 "--nproc_per_node", "2", 
                 "--use_env",
-                "./Support_Vector_Regression/main.py",
+                "./u2net/train_multi_GPU.py",
                 // "./fcn/train_multi_GPU.py",
-                "--img_type", "ALL",
+                "--img_type", "OSP",
             ]
         }
     ]

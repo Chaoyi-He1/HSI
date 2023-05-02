@@ -5,3 +5,4 @@ multi_train/
 runs/
 SVR_weights/
 /fcn/multi_train/
+/u2net/multi_train/
