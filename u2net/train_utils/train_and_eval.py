@@ -1,7 +1,7 @@
 import math
 import torch
 from torch.nn import functional as F
-import train_utils.distributed_utils as utils
+import distributed_utils as utils
 
 
 def criterion(inputs, target):
