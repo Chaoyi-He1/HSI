@@ -175,7 +175,7 @@ class U2Net(nn.Module):
 def u2net_full(out_ch: int = 1):
     cfg = {
         # height, in_ch, mid_ch, out_ch, RSU4F, side
-        "encode": [[7, 3, 32, 64, False, False],      # En1
+        "encode": [[7, 10, 32, 64, False, False],      # En1
                    [6, 64, 32, 128, False, False],    # En2
                    [5, 128, 64, 256, False, False],   # En3
                    [4, 256, 128, 512, False, False],  # En4

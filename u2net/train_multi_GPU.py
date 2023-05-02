@@ -6,38 +6,49 @@ from typing import Union, List
 import torch
 from torch.utils import data
 
-from src import u2net_full
+from src import *
 from train_utils import (train_one_epoch, evaluate, init_distributed_mode, save_on_master, mkdir,
                          create_lr_scheduler, get_params_groups)
-from my_dataset import DUTSDataset
+from my_dataset import HSI_Segmentation
 import transforms as T
 
 
-class SODPresetTrain:
-    def __init__(self, base_size: Union[int, List[int]], crop_size: int,
-                 hflip_prob=0.5, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
-        self.transforms = T.Compose([
-            T.ToTensor(),
-            T.Resize(base_size, resize_mask=True),
+class SegmentationPresetTrain:
+    def __init__(self, base_size, crop_size, hflip_prob=0.5, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
+        min_size = int(0.8 * base_size)
+        max_size = int(1.05 * base_size)
+
+        trans = [T.ToTensor()]
+        if hflip_prob > 0:
+            trans.append(T.RandomHorizontalFlip(hflip_prob))
+        trans.extend([
             T.RandomCrop(crop_size),
-            T.RandomHorizontalFlip(hflip_prob),
-            T.Normalize(mean=mean, std=std)
+            # T.RandomResize(min_size, max_size), 
+            # T.Normalize(mean=mean, std=std),
         ])
+        self.transforms = T.Compose(trans)
 
     def __call__(self, img, target):
         return self.transforms(img, target)
 
 
-class SODPresetEval:
-    def __init__(self, base_size: Union[int, List[int]], mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
+class SegmentationPresetEval:
+    def __init__(self, base_size, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
         self.transforms = T.Compose([
             T.ToTensor(),
-            T.Resize(base_size, resize_mask=False),
-            T.Normalize(mean=mean, std=std),
+            # T.RandomResize(base_size, base_size),
+            # T.Normalize(mean=mean, std=std),
         ])
 
     def __call__(self, img, target):
         return self.transforms(img, target)
+
+
+def get_transform(train):
+    base_size = 1400
+    crop_size = 1400
+
+    return SegmentationPresetTrain(base_size, crop_size) if train else SegmentationPresetEval(base_size)
 
 
 def main(args):
@@ -49,8 +60,16 @@ def main(args):
     # 用来保存训练以及验证过程中信息
     results_file = "results{}.txt".format(datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
 
-    train_dataset = DUTSDataset(args.data_path, train=True, transforms=SODPresetTrain([320, 320], crop_size=288))
-    val_dataset = DUTSDataset(args.data_path, train=False, transforms=SODPresetEval([320, 320]))
+    train_dataset = HSI_Segmentation(data_path=args.train_data_path,
+                                    label_type=args.label_type,
+                                    img_type=args.img_type,
+                                    transforms=get_transform(train=True))
+    # load validation data set
+    # VOCdevkit -> VOC2012 -> ImageSets -> Segmentation -> val.txt
+    val_dataset = HSI_Segmentation(data_path=args.val_data_path,
+                                   label_type=args.label_type,
+                                   img_type=args.img_type,
+                                   transforms=get_transform(train=False))
 
     print("Creating data loaders")
     if args.distributed:
@@ -71,7 +90,7 @@ def main(args):
         pin_memory=True, collate_fn=train_dataset.collate_fn)
 
     # create model num_classes equal background + 20 classes
-    model = u2net_full()
+    model = u2net_lite(out_ch=19)
     model.to(device)
 
     if args.sync_bn:
@@ -168,8 +187,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description=__doc__)
 
-    # 训练文件的根目录(VOCdevkit)
-    parser.add_argument('--data-path', default='./', help='DUTS root')
+    # 训练文件的根目录
+    parser.add_argument('--train_data_path', default='/data2/chaoyi/HSI Dataset/V2/train/', help='dataset')
+    parser.add_argument('--val_data_path', default='/data2/chaoyi/HSI Dataset/V2/val/', help='dataset')
+    parser.add_argument('--label_type', default='gray', help='label type: gray or viz')
+    parser.add_argument('--img_type', default='OSP', help='image type: OSP or PCA or rgb')
     # 训练设备类型
     parser.add_argument('--device', default='cuda', help='device')
     # 每块GPU上的batch_size
@@ -184,7 +206,7 @@ if __name__ == "__main__":
                         metavar='W', help='weight decay (default: 1e-4)',
                         dest='weight_decay')
     # 是否使用同步BN(在多个GPU之间同步)，默认不开启，开启后训练速度会变慢
-    parser.add_argument('--sync-bn', action='store_ture', help='whether using SyncBatchNorm')
+    parser.add_argument('--sync-bn', action='store_true', help='whether using SyncBatchNorm')
     # 数据加载以及预处理的线程数
     parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                         help='number of data loading workers (default: 4)')
@@ -196,7 +218,7 @@ if __name__ == "__main__":
     # 训练过程打印信息的频率
     parser.add_argument('--print-freq', default=20, type=int, help='print frequency')
     # 文件保存地址
-    parser.add_argument('--output-dir', default='./multi_train', help='path where to save')
+    parser.add_argument('--output-dir', default='./u2net/multi_train/OSP', help='path where to save')
     # 基于上次的训练结果接着训练
     parser.add_argument('--resume', default='', help='resume from checkpoint')
     # 不训练，仅测试
@@ -212,7 +234,7 @@ if __name__ == "__main__":
                         help='number of distributed processes')
     parser.add_argument('--dist-url', default='env://', help='url used to set up distributed training')
     # Mixed precision training parameters
-    parser.add_argument("--amp", action='store_ture',
+    parser.add_argument("--amp", action='store_false',
                         help="Use torch.cuda.amp for mixed precision training")
 
     args = parser.parse_args()
