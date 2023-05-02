@@ -5,8 +5,9 @@ import train_utils.distributed_utils as utils
 
 
 def criterion(inputs, target):
-    losses = [F.cross_entropy(inputs[i], target) for i in range(len(inputs))]
-    total_loss = sum(losses * torch.linspace(0.1, 1, len(inputs)))
+    weights = torch.linspace(0.1, 1, len(inputs))
+    losses = [F.cross_entropy(torch.flatten(torch.permute(inputs[i], (0, 2, 3, 1)), 0, 2).contiguous(), torch.flatten(torch.squeeze(target), 0, 2).long()) * weights[i] for i in range(len(inputs))]
+    total_loss = sum(losses)
 
     return total_loss
 

@@ -195,7 +195,7 @@ if __name__ == "__main__":
     # 训练设备类型
     parser.add_argument('--device', default='cuda', help='device')
     # 每块GPU上的batch_size
-    parser.add_argument('-b', '--batch-size', default=16, type=int,
+    parser.add_argument('-b', '--batch-size', default=2, type=int,
                         help='images per gpu, the total batch size is $NGPU x batch_size')
     # 指定接着从哪个epoch数开始训练
     parser.add_argument('--start-epoch', default=0, type=int, help='start epoch')

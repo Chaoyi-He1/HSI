@@ -195,7 +195,7 @@ def u2net_full(out_ch: int = 1):
 def u2net_lite(out_ch: int = 1):
     cfg = {
         # height, in_ch, mid_ch, out_ch, RSU4F, side
-        "encode": [[7, 3, 16, 64, False, False],  # En1
+        "encode": [[7, 10, 16, 64, False, False],  # En1
                    [6, 64, 16, 64, False, False],  # En2
                    [5, 64, 16, 64, False, False],  # En3
                    [4, 64, 16, 64, False, False],  # En4
