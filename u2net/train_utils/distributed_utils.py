@@ -122,12 +122,17 @@ class MeanAbsoluteError(object):
 
 
 class ConfusionMatrix(object):
-    def __init__(self, num_classes):
+    def __init__(self, num_classes, device):
         self.num_classes = num_classes
         self.mat = None
+        self.max = 0
+        self.dist = torch.zeros((num_classes, ), dtype=torch.int64, device=device)
 
     def update(self, a, b):
         n = self.num_classes
+        self.max = max(self.max, torch.max(a[a != 255])) 
+        classes, counts = torch.unique(a[a != 255], return_counts=True)
+        self.dist[classes] += counts
         if self.mat is None:
             # 创建混淆矩阵
             self.mat = torch.zeros((n, n), dtype=torch.int64, device=a.device)
@@ -147,7 +152,7 @@ class ConfusionMatrix(object):
         # 计算全局预测准确率(混淆矩阵的对角线为预测正确的个数)
         acc_global = torch.diag(h).sum() / h.sum()
         # 计算每个类别的准确率
-        acc = torch.diag(h) / h.sum(1)
+        acc = torch.diag(h) / (h.sum(1) + (h.sum(1) == 0).float())
         # 计算每个类别预测与真实目标的iou
         iu = torch.diag(h) / (h.sum(1) + h.sum(0) - torch.diag(h))
         return acc_global, acc, iu

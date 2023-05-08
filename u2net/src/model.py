@@ -172,10 +172,10 @@ class U2Net(nn.Module):
             return torch.sigmoid(x)
 
 
-def u2net_full(out_ch: int = 1):
+def u2net_full(in_ch: int = 3, out_ch: int = 1):
     cfg = {
         # height, in_ch, mid_ch, out_ch, RSU4F, side
-        "encode": [[7, 10, 32, 64, False, False],      # En1
+        "encode": [[7, in_ch, 32, 64, False, False],      # En1
                    [6, 64, 32, 128, False, False],    # En2
                    [5, 128, 64, 256, False, False],   # En3
                    [4, 256, 128, 512, False, False],  # En4
@@ -192,10 +192,10 @@ def u2net_full(out_ch: int = 1):
     return U2Net(cfg, out_ch)
 
 
-def u2net_lite(out_ch: int = 1):
+def u2net_lite(in_ch: int = 3, out_ch: int = 1):
     cfg = {
         # height, in_ch, mid_ch, out_ch, RSU4F, side
-        "encode": [[7, 10, 16, 64, False, False],  # En1
+        "encode": [[7, in_ch, 16, 64, False, False],  # En1
                    [6, 64, 16, 64, False, False],  # En2
                    [5, 64, 16, 64, False, False],  # En3
                    [4, 64, 16, 64, False, False],  # En4

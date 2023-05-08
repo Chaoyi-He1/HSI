@@ -2,6 +2,8 @@ import random
 from typing import List, Union
 from torchvision.transforms import functional as F
 from torchvision.transforms import transforms as T
+import torch
+import numpy as np
 
 
 class Compose(object):
@@ -18,7 +20,8 @@ class Compose(object):
 class ToTensor(object):
     def __call__(self, image, target):
         image = F.to_tensor(image)
-        target = F.to_tensor(target)
+        target = torch.as_tensor(np.array(target), dtype=torch.int64)
+        target = target.unsqueeze(0) if len(target.shape) != 3 else target
         return image, target
 
 

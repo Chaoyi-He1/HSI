@@ -1,26 +1,25 @@
 import math
 import torch
 from torch.nn import functional as F
-import distributed_utils as utils
+import train_utils.distributed_utils as utils
 
 
 def criterion(inputs, target):
-    weights = torch.linspace(0.1, 1, len(inputs))
-    losses = [F.cross_entropy(torch.flatten(torch.permute(inputs[i], (0, 2, 3, 1)), 0, 2).contiguous(),
-                              torch.flatten(torch.squeeze(target), 0, 2).long()) * weights[i]
+    # weights = torch.linspace(0.1, 1, len(inputs))
+    losses = [F.cross_entropy(inputs[i], target.squeeze().long(), ignore_index=255)
               for i in range(len(inputs))]
     total_loss = sum(losses)
 
     return total_loss
 
 
-def evaluate(model, data_loader, num_classes, device):
+def evaluate(model, data_loader, num_classes, device, scaler=None):
     model.eval()
     mae_metric = utils.MeanAbsoluteError()
-    confmat = utils.ConfusionMatrix(num_classes)
+    confmat = utils.ConfusionMatrix(num_classes, device)
     metric_logger = utils.MetricLogger(delimiter="  ")
     header = 'Test:'
-    with torch.no_grad():
+    with torch.no_grad(), torch.cuda.amp.autocast(enabled=scaler is not None):
         for images, targets in metric_logger.log_every(data_loader, 100, header):
             images, targets = images.to(device), targets.to(device)
             output = model(images)
@@ -31,7 +30,7 @@ def evaluate(model, data_loader, num_classes, device):
             # output = (output - mi) / (ma - mi)
 
             mae_metric.update(output, targets)
-            confmat.update(output, targets)
+            confmat.update(targets.flatten(), output.argmax(1).flatten())
 
         mae_metric.gather_from_all_processes()
         confmat.reduce_from_all_processes()

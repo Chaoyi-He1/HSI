@@ -5,7 +5,7 @@ from typing import Union, List
 
 import torch
 from torch.utils import data
-
+from torch.utils.tensorboard import SummaryWriter
 from src import *
 from train_utils import (train_one_epoch, evaluate, init_distributed_mode, save_on_master, mkdir,
                          create_lr_scheduler, get_params_groups)
@@ -54,7 +54,9 @@ def get_transform(train):
 def main(args):
     init_distributed_mode(args)
     print(args)
-
+    if args.rank in [-1, 0]:
+        print('Start Tensorboard with "tensorboard --logdir=runs", view at http://localhost:6006/')
+        tb_writer = SummaryWriter(comment=os.path.join("runs", args.img_type, args.name))
     device = torch.device(args.device)
 
     # 用来保存训练以及验证过程中信息
@@ -90,7 +92,8 @@ def main(args):
         pin_memory=True, collate_fn=train_dataset.collate_fn)
 
     # create model num_classes equal background + 20 classes
-    model = u2net_lite(out_ch=19)
+    in_ch = 10 if args.img_type != "rgb" else 3
+    model = u2net_lite(in_ch=in_ch, out_ch=20)
     model.to(device)
 
     if args.sync_bn:
@@ -146,21 +149,34 @@ def main(args):
 
         if epoch % args.eval_interval == 0 or epoch == args.epochs - 1:
             # 每间隔eval_interval个epoch验证一次，减少验证频率节省训练时间
-            mae_metric, f1_metric = evaluate(model, val_data_loader, device=device)
-            mae_info, f1_info = mae_metric.compute(), f1_metric.compute()
-            print(f"[epoch: {epoch}] val_MAE: {mae_info:.3f} val_maxF1: {f1_info:.3f}")
+            mae_metric, confmat = evaluate(model, val_data_loader, num_classes=20, device=device, scaler=scaler)
+            mae_info, (acc_global, acc, iu) = mae_metric.compute(), confmat.compute()
+            print(f"[epoch: {epoch}] val_MAE: {mae_info:.3f} ", str(confmat))
 
             # 只在主进程上进行写操作
             if args.rank in [-1, 0]:
+                if tb_writer:
+                    tags = ['global_correct', 
+                            'average_class_correct/background', 'average_class_correct/car', 'average_class_correct/human', 
+                            'average_class_correct/road', 'average_class_correct/traffic_light', 'average_class_correct/traffic_sign', 
+                            'average_class_correct/tree', 'average_class_correct/building', 'average_class_correct/sky', 
+                            'average_class_correct/object',
+                            'IoU/Background', 'IoU/Car', 'IoU/Human', 'IoU/Road', 'IoU/Traffic_light', 
+                            'IoU/Traffic_sign', 'IoU/Tree', 'IoU/Building', 'IoU/Sky', 'IoU/Object',
+                            'mean_IoU']
+                    values = [acc_global.item() * 100] + [i for i in (acc * 100).tolist()] + \
+                            [i for i in (iu * 100).tolist()] + [iu.mean().item() * 100]
+                    for x, tag in zip(values, tags):
+                        tb_writer.add_scalar(tag, x, epoch)
                 # write into txt
                 with open(results_file, "a") as f:
                     # 记录每个epoch对应的train_loss、lr以及验证集各指标
                     write_info = f"[epoch: {epoch}] train_loss: {mean_loss:.4f} lr: {lr:.6f} " \
-                                 f"MAE: {mae_info:.3f} maxF1: {f1_info:.3f} \n"
-                    f.write(write_info)
+                                 f"MAE: {mae_info:.3f} \n" + str(confmat)
+                    f.write(write_info + "\n\n")
 
                 # save_best
-                if current_mae >= mae_info and current_f1 <= f1_info:
+                if current_mae >= mae_info:
                     if args.output_dir:
                         # 只在主节点上执行保存权重操作
                         save_on_master(save_file,
@@ -192,6 +208,7 @@ if __name__ == "__main__":
     parser.add_argument('--val_data_path', default='/data2/chaoyi/HSI Dataset/V2/val/', help='dataset')
     parser.add_argument('--label_type', default='gray', help='label type: gray or viz')
     parser.add_argument('--img_type', default='OSP', help='image type: OSP or PCA or rgb')
+    parser.add_argument('--name', default='', help='renames results.txt to results_name.txt if supplied')
     # 训练设备类型
     parser.add_argument('--device', default='cuda', help='device')
     # 每块GPU上的batch_size
@@ -214,7 +231,7 @@ if __name__ == "__main__":
     parser.add_argument('--lr', default=0.001, type=float,
                         help='initial learning rate')
     # 验证频率
-    parser.add_argument("--eval-interval", default=10, type=int, help="validation interval default 10 Epochs")
+    parser.add_argument("--eval-interval", default=1, type=int, help="validation interval default 10 Epochs")
     # 训练过程打印信息的频率
     parser.add_argument('--print-freq', default=20, type=int, help='print frequency')
     # 文件保存地址
