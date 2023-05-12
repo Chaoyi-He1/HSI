@@ -4,25 +4,24 @@ import datetime
 
 import torch
 
-from src import fcn_resnet50
+from src import lraspp_mobilenetv3_large
 from train_utils import train_one_epoch, evaluate, create_lr_scheduler, init_distributed_mode, save_on_master, mkdir
-from my_dataset import VOCSegmentation, HSI_Segmentation
+from my_dataset import VOCSegmentation
 import transforms as T
-from torch.utils.tensorboard import SummaryWriter
 
 
 class SegmentationPresetTrain:
     def __init__(self, base_size, crop_size, hflip_prob=0.5, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
-        min_size = int(0.8 * base_size)
-        max_size = int(1.05 * base_size)
+        min_size = int(0.5 * base_size)
+        max_size = int(2.0 * base_size)
 
-        trans = [T.ToTensor()]
+        trans = [T.RandomResize(min_size, max_size)]
         if hflip_prob > 0:
             trans.append(T.RandomHorizontalFlip(hflip_prob))
         trans.extend([
             T.RandomCrop(crop_size),
-            T.RandomResize(min_size, max_size), 
-            # T.Normalize(mean=mean, std=std),
+            T.ToTensor(),
+            T.Normalize(mean=mean, std=std),
         ])
         self.transforms = T.Compose(trans)
 
@@ -33,9 +32,9 @@ class SegmentationPresetTrain:
 class SegmentationPresetEval:
     def __init__(self, base_size, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
         self.transforms = T.Compose([
-            T.ToTensor(),
             T.RandomResize(base_size, base_size),
-            # T.Normalize(mean=mean, std=std),
+            T.ToTensor(),
+            T.Normalize(mean=mean, std=std),
         ])
 
     def __call__(self, img, target):
@@ -43,27 +42,27 @@ class SegmentationPresetEval:
 
 
 def get_transform(train):
-    base_size = 1400
-    crop_size = 1400
+    base_size = 520
+    crop_size = 480
 
     return SegmentationPresetTrain(base_size, crop_size) if train else SegmentationPresetEval(base_size)
 
 
-def create_model(aux, num_classes, args):
-    model = fcn_resnet50(aux=aux, num_classes=num_classes, in_channel=10 if args.img_type != 'rgb' else 3)
-    # weights_dict = torch.load("./fcn_resnet50_coco.pth", map_location='cpu')
+def create_model(num_classes):
+    model = lraspp_mobilenetv3_large(num_classes=num_classes)
+    weights_dict = torch.load("./deeplabv3_resnet50_coco.pth", map_location='cpu')
 
-    # if num_classes != 21:
-    #     # 官方提供的预训练权重是21类(包括背景)
-    #     # 如果训练自己的数据集，将和类别相关的权重删除，防止权重shape不一致报错
-    #     for k in list(weights_dict.keys()):
-    #         if "classifier.4" in k:
-    #             del weights_dict[k]
+    if num_classes != 21:
+        # 官方提供的预训练权重是21类(包括背景)
+        # 如果训练自己的数据集，将和类别相关的权重删除，防止权重shape不一致报错
+        for k in list(weights_dict.keys()):
+            if "low_classifier" in k or "high_classifier" in k:
+                del weights_dict[k]
 
-    # missing_keys, unexpected_keys = model.load_state_dict(weights_dict, strict=False)
-    # if len(missing_keys) != 0 or len(unexpected_keys) != 0:
-    #     print("missing_keys: ", missing_keys)
-    #     print("unexpected_keys: ", unexpected_keys)
+    missing_keys, unexpected_keys = model.load_state_dict(weights_dict, strict=False)
+    if len(missing_keys) != 0 or len(unexpected_keys) != 0:
+        print("missing_keys: ", missing_keys)
+        print("unexpected_keys: ", unexpected_keys)
 
     return model
 
@@ -71,9 +70,6 @@ def create_model(aux, num_classes, args):
 def main(args):
     init_distributed_mode(args)
     print(args)
-    if args.rank in [-1, 0]:
-        print('Start Tensorboard with "tensorboard --logdir=runs", view at http://localhost:6006/')
-        tb_writer = SummaryWriter(comment=os.path.join("runs", args.img_type, args.name))
 
     device = torch.device(args.device)
     # segmentation nun_classes + background
@@ -82,18 +78,24 @@ def main(args):
     # 用来保存coco_info的文件
     results_file = "results{}.txt".format(datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
 
+    VOC_root = args.data_path
+    # check voc root
+    if os.path.exists(os.path.join(VOC_root, "VOCdevkit")) is False:
+        raise FileNotFoundError("VOCdevkit dose not in path:'{}'.".format(VOC_root))
+
     # load train data set
     # VOCdevkit -> VOC2012 -> ImageSets -> Segmentation -> train.txt
-    train_dataset = HSI_Segmentation(data_path=args.train_data_path,
-                                     label_type=args.label_type,
-                                     img_type=args.img_type,
-                                     transforms=get_transform(train=True))
+    train_dataset = VOCSegmentation(args.data_path,
+                                    year="2012",
+                                    transforms=get_transform(train=True),
+                                    txt_name="train.txt")
     # load validation data set
     # VOCdevkit -> VOC2012 -> ImageSets -> Segmentation -> val.txt
-    val_dataset = HSI_Segmentation(data_path=args.val_data_path,
-                                   label_type=args.label_type,
-                                   img_type=args.img_type,
-                                   transforms=get_transform(train=False))
+    val_dataset = VOCSegmentation(args.data_path,
+                                  year="2012",
+                                  transforms=get_transform(train=False),
+                                  txt_name="val.txt")
+
     print("Creating data loaders")
     if args.distributed:
         train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
@@ -114,15 +116,11 @@ def main(args):
 
     print("Creating model")
     # create model num_classes equal background + 20 classes
-    model = create_model(aux=args.aux, num_classes=num_classes, args=args)
+    model = create_model(num_classes=num_classes)
     model.to(device)
 
     if args.sync_bn:
         model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
-    
-    if args.rank in [-1, 0] and tb_writer:
-        tb_writer.add_graph(model, torch.rand((1, 10 if args.img_type != 'rgb' else 3, 1400, 1800), 
-                                              device=device, dtype=torch.float), use_strict_trace=False)
 
     model_without_ddp = model
     if args.distributed:
@@ -133,11 +131,10 @@ def main(args):
         {"params": [p for p in model_without_ddp.backbone.parameters() if p.requires_grad]},
         {"params": [p for p in model_without_ddp.classifier.parameters() if p.requires_grad]},
     ]
-    if args.aux:
-        params = [p for p in model_without_ddp.aux_classifier.parameters() if p.requires_grad]
-        params_to_optimize.append({"params": params, "lr": args.lr * 10})
-    optimizer = torch.optim.Adam(
-        params_to_optimize, lr=args.lr, weight_decay=args.weight_decay)
+
+    optimizer = torch.optim.SGD(
+        params_to_optimize,
+        lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
 
     scaler = torch.cuda.amp.GradScaler() if args.amp else None
 
@@ -158,39 +155,25 @@ def main(args):
             scaler.load_state_dict(checkpoint["scaler"])
 
     if args.test_only:
-        confmat = evaluate(model, val_data_loader, device=device, num_classes=num_classes, scaler=scaler)
+        confmat = evaluate(model, val_data_loader, device=device, num_classes=num_classes)
         val_info = str(confmat)
         print(val_info)
         return
 
     print("Start training")
     start_time = time.time()
-    for epoch in range(args.start_epoch, args.epochs + args.start_epoch):
+    for epoch in range(args.start_epoch, args.epochs):
         if args.distributed:
             train_sampler.set_epoch(epoch)
         mean_loss, lr = train_one_epoch(model, optimizer, train_data_loader, device, epoch,
                                         lr_scheduler=lr_scheduler, print_freq=args.print_freq, scaler=scaler)
 
-        confmat = evaluate(model, val_data_loader, device=device, num_classes=num_classes, scaler=scaler)
-        acc_global, acc, iu = confmat.compute()
+        confmat = evaluate(model, val_data_loader, device=device, num_classes=num_classes)
         val_info = str(confmat)
         print(val_info)
 
         # 只在主进程上进行写操作
         if args.rank in [-1, 0]:
-            if tb_writer:
-                tags = ['global_correct', 
-                        'average_class_correct/background', 'average_class_correct/car', 'average_class_correct/human', 
-                        'average_class_correct/road', 'average_class_correct/traffic_light', 'average_class_correct/traffic_sign', 
-                        'average_class_correct/tree', 'average_class_correct/building', 'average_class_correct/sky', 
-                        'average_class_correct/object',
-                        'IoU/Background', 'IoU/Car', 'IoU/Human', 'IoU/Road', 'IoU/Traffic_light', 
-                        'IoU/Traffic_sign', 'IoU/Tree', 'IoU/Building', 'IoU/Sky', 'IoU/Object',
-                        'mean_IoU']
-                values = [acc_global.item() * 100] + [i for i in (acc * 100).tolist()] + \
-                         [i for i in (iu * 100).tolist()] + [iu.mean().item() * 100]
-                for x, tag in zip(values, tags):
-                    tb_writer.add_scalar(tag, x, epoch)
             # write into txt
             with open(results_file, "a") as f:
                 # 记录每个epoch对应的train_loss、lr以及验证集各指标
@@ -223,23 +206,18 @@ if __name__ == "__main__":
         description=__doc__)
 
     # 训练文件的根目录(VOCdevkit)
-    parser.add_argument('--train_data_path', default='/data2/chaoyi/HSI Dataset/V2/train/', help='dataset')
-    parser.add_argument('--val_data_path', default='/data2/chaoyi/HSI Dataset/V2/val/', help='dataset')
-    parser.add_argument('--label_type', default='gray', help='label type: gray or viz')
-    parser.add_argument('--img_type', default='OSP', help='image type: OSP or PCA or rgb')
-    parser.add_argument('--name', default='', help='renames results.txt to results_name.txt if supplied')
+    parser.add_argument('--data-path', default='/data/', help='dataset')
     # 训练设备类型
     parser.add_argument('--device', default='cuda', help='device')
     # 检测目标类别数(不包含背景)
-    parser.add_argument('--num-classes', default=19, type=int, help='num_classes')
+    parser.add_argument('--num-classes', default=20, type=int, help='num_classes')
     # 每块GPU上的batch_size
-    parser.add_argument('-b', '--batch-size', default=1, type=int,
+    parser.add_argument('-b', '--batch-size', default=4, type=int,
                         help='images per gpu, the total batch size is $NGPU x batch_size')
-    parser.add_argument("--aux", default=False, type=bool, help="auxilier loss")
     # 指定接着从哪个epoch数开始训练
     parser.add_argument('--start_epoch', default=0, type=int, help='start epoch')
     # 训练的总epoch数
-    parser.add_argument('--epochs', default=200, type=int, metavar='N',
+    parser.add_argument('--epochs', default=20, type=int, metavar='N',
                         help='number of total epochs to run')
     # 是否使用同步BN(在多个GPU之间同步)，默认不开启，开启后训练速度会变慢
     parser.add_argument('--sync_bn', type=bool, default=False, help='whether using SyncBatchNorm')
@@ -253,13 +231,13 @@ if __name__ == "__main__":
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                         help='momentum')
     # SGD的weight_decay参数
-    parser.add_argument('--wd', '--weight-decay', default=1e-6, type=float,
+    parser.add_argument('--wd', '--weight-decay', default=1e-4, type=float,
                         metavar='W', help='weight decay (default: 1e-4)',
                         dest='weight_decay')
     # 训练过程打印信息的频率
     parser.add_argument('--print-freq', default=20, type=int, help='print frequency')
     # 文件保存地址
-    parser.add_argument('--output-dir', default='./fcn/multi_train/OSP/', help='path where to save')
+    parser.add_argument('--output-dir', default='./multi_train', help='path where to save')
     # 基于上次的训练结果接着训练
     parser.add_argument('--resume', default='', help='resume from checkpoint')
     # 不训练，仅测试
@@ -271,11 +249,11 @@ if __name__ == "__main__":
     )
 
     # 分布式进程数
-    parser.add_argument('--world-size', default=4, type=int,
+    parser.add_argument('--world-size', default=1, type=int,
                         help='number of distributed processes')
     parser.add_argument('--dist-url', default='env://', help='url used to set up distributed training')
     # Mixed precision training parameters
-    parser.add_argument("--amp", default=True, type=bool,
+    parser.add_argument("--amp", default=False, type=bool,
                         help="Use torch.cuda.amp for mixed precision training")
 
     args = parser.parse_args()

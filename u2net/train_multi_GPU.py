@@ -237,7 +237,7 @@ if __name__ == "__main__":
     # 文件保存地址
     parser.add_argument('--output-dir', default='./u2net/multi_train/OSP', help='path where to save')
     # 基于上次的训练结果接着训练
-    parser.add_argument('--resume', default='', help='resume from checkpoint')
+    parser.add_argument('--resume', default='/data/chaoyi_he/HSI/EC_dataset/u2net/multi_train/OSP/model_48.pth', help='resume from checkpoint')
     # 不训练，仅测试
     parser.add_argument(
         "--test-only",

@@ -116,7 +116,7 @@ class HSI_Segmentation(data.Dataset):
 
         if self.transforms is not None:
             img, target = self.transforms(img, target)
-
+        target[target == 255] = 19
         return img, target
 
     def __len__(self):
