@@ -13,7 +13,7 @@
             "args": [
                 "--nproc_per_node", "2", 
                 "--use_env",
-                "./u2net/train_multi_GPU.py",
+                "./lraspp/train_multi_GPU.py",
                 // "./fcn/train_multi_GPU.py",
                 "--img_type", "OSP",
             ]

@@ -6,7 +6,7 @@ import torch
 
 from src import lraspp_mobilenetv3_large, lraspp_mobilenetv3_small
 from train_utils import train_one_epoch, evaluate, create_lr_scheduler, init_distributed_mode, save_on_master, mkdir
-from my_dataset import VOCSegmentation
+from my_dataset import HSI_Segmentation
 import transforms as T
 
 
@@ -21,7 +21,7 @@ class SegmentationPresetTrain:
         trans.extend([
             T.RandomCrop(crop_size),
             T.ToTensor(),
-            T.Normalize(mean=mean, std=std),
+            # T.Normalize(mean=mean, std=std),
         ])
         self.transforms = T.Compose(trans)
 
@@ -34,7 +34,7 @@ class SegmentationPresetEval:
         self.transforms = T.Compose([
             T.RandomResize(base_size, base_size),
             T.ToTensor(),
-            T.Normalize(mean=mean, std=std),
+            # T.Normalize(mean=mean, std=std),
         ])
 
     def __call__(self, img, target):
@@ -86,17 +86,16 @@ def main(args):
         raise FileNotFoundError("VOCdevkit dose not in path:'{}'.".format(VOC_root))
 
     # load train data set
-    # VOCdevkit -> VOC2012 -> ImageSets -> Segmentation -> train.txt
-    train_dataset = VOCSegmentation(args.data_path,
-                                    year="2012",
-                                    transforms=get_transform(train=True),
-                                    txt_name="train.txt")
+    train_dataset = HSI_Segmentation(data_path=args.train_data_path,
+                                     label_type=args.label_type,
+                                     img_type=args.img_type,
+                                     transforms=get_transform(train=True))
     # load validation data set
     # VOCdevkit -> VOC2012 -> ImageSets -> Segmentation -> val.txt
-    val_dataset = VOCSegmentation(args.data_path,
-                                  year="2012",
-                                  transforms=get_transform(train=False),
-                                  txt_name="val.txt")
+    val_dataset = HSI_Segmentation(data_path=args.val_data_path,
+                                   label_type=args.label_type,
+                                   img_type=args.img_type,
+                                   transforms=get_transform(train=False))
 
     print("Creating data loaders")
     if args.distributed:
@@ -134,7 +133,7 @@ def main(args):
         {"params": [p for p in model_without_ddp.classifier.parameters() if p.requires_grad]},
     ]
 
-    optimizer = torch.optim.SGD(
+    optimizer = torch.optim.Adam(
         params_to_optimize,
         lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
 
@@ -170,7 +169,7 @@ def main(args):
         mean_loss, lr = train_one_epoch(model, optimizer, train_data_loader, device, epoch,
                                         lr_scheduler=lr_scheduler, print_freq=args.print_freq, scaler=scaler)
 
-        confmat = evaluate(model, val_data_loader, device=device, num_classes=num_classes)
+        confmat = evaluate(model, val_data_loader, device=device, num_classes=num_classes, scaler=scaler)
         val_info = str(confmat)
         print(val_info)
 
@@ -208,7 +207,11 @@ if __name__ == "__main__":
         description=__doc__)
 
     # 训练文件的根目录(VOCdevkit)
-    parser.add_argument('--data-path', default='/data/', help='dataset')
+    parser.add_argument('--train_data_path', default='/data2/chaoyi/HSI Dataset/V2/train/', help='dataset')
+    parser.add_argument('--val_data_path', default='/data2/chaoyi/HSI Dataset/V2/val/', help='dataset')
+    parser.add_argument('--label_type', default='gray', help='label type: gray or viz')
+    parser.add_argument('--img_type', default='OSP', help='image type: OSP or PCA or rgb')
+    parser.add_argument('--name', default='', help='renames results.txt to results_name.txt if supplied')
     # 训练设备类型
     parser.add_argument('--device', default='cuda', help='device')
     # 检测目标类别数(不包含背景)
@@ -239,7 +242,7 @@ if __name__ == "__main__":
     # 训练过程打印信息的频率
     parser.add_argument('--print-freq', default=20, type=int, help='print frequency')
     # 文件保存地址
-    parser.add_argument('--output-dir', default='./multi_train', help='path where to save')
+    parser.add_argument('--output-dir', default='./lraspp/multi_train/OSP/', help='path where to save')
     # 基于上次的训练结果接着训练
     parser.add_argument('--resume', default='', help='resume from checkpoint')
     # 不训练，仅测试
@@ -255,7 +258,7 @@ if __name__ == "__main__":
                         help='number of distributed processes')
     parser.add_argument('--dist-url', default='env://', help='url used to set up distributed training')
     # Mixed precision training parameters
-    parser.add_argument("--amp", default=False, type=bool,
+    parser.add_argument("--amp", default=True, type=bool,
                         help="Use torch.cuda.amp for mixed precision training")
 
     args = parser.parse_args()
