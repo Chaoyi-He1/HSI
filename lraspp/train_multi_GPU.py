@@ -4,7 +4,7 @@ import datetime
 
 import torch
 
-from src import lraspp_mobilenetv3_large
+from src import lraspp_mobilenetv3_large, lraspp_mobilenetv3_small
 from train_utils import train_one_epoch, evaluate, create_lr_scheduler, init_distributed_mode, save_on_master, mkdir
 from my_dataset import VOCSegmentation
 import transforms as T
@@ -48,21 +48,23 @@ def get_transform(train):
     return SegmentationPresetTrain(base_size, crop_size) if train else SegmentationPresetEval(base_size)
 
 
-def create_model(num_classes):
-    model = lraspp_mobilenetv3_large(num_classes=num_classes)
-    weights_dict = torch.load("./deeplabv3_resnet50_coco.pth", map_location='cpu')
+def create_model(num_classes, large=False, pretrain=False, in_chans=10):
+    model = lraspp_mobilenetv3_large(num_classes=num_classes, in_channels=in_chans) \
+    if large else lraspp_mobilenetv3_small(num_classes=num_classes, in_channels=in_chans)
 
-    if num_classes != 21:
-        # 官方提供的预训练权重是21类(包括背景)
-        # 如果训练自己的数据集，将和类别相关的权重删除，防止权重shape不一致报错
-        for k in list(weights_dict.keys()):
-            if "low_classifier" in k or "high_classifier" in k:
-                del weights_dict[k]
-
-    missing_keys, unexpected_keys = model.load_state_dict(weights_dict, strict=False)
-    if len(missing_keys) != 0 or len(unexpected_keys) != 0:
-        print("missing_keys: ", missing_keys)
-        print("unexpected_keys: ", unexpected_keys)
+    if pretrain:
+        weights_dict = torch.load("./deeplabv3_resnet50_coco.pth", map_location='cpu')
+        if num_classes != 21:
+            # The official pre-training weights are 21 categories (including background)
+            # If you train your own data set, delete the weights related to the category 
+            # to prevent inconsistent weight shapes from reporting errors
+            for k in list(weights_dict.keys()):
+                if "low_classifier" in k or "high_classifier" in k:
+                    del weights_dict[k]
+        missing_keys, unexpected_keys = model.load_state_dict(weights_dict, strict=False)
+        if len(missing_keys) != 0 or len(unexpected_keys) != 0:
+            print("missing_keys: ", missing_keys)
+            print("unexpected_keys: ", unexpected_keys)
 
     return model
 
@@ -116,7 +118,7 @@ def main(args):
 
     print("Creating model")
     # create model num_classes equal background + 20 classes
-    model = create_model(num_classes=num_classes)
+    model = create_model(num_classes=num_classes, in_chans=3 if args.img_type == "rgb" else 10)
     model.to(device)
 
     if args.sync_bn:
