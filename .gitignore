@@ -6,3 +6,8 @@ runs/
 SVR_weights/
 /fcn/multi_train/
 /u2net/multi_train/
+/lraspp/multi_train/
+/lraspp/__pycache__/
+/fcn/__pycache__/
+/u2net/__pycache__/
+/Support_Vector_Regression/__pycache__/
