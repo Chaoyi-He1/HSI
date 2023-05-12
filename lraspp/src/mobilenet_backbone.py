@@ -152,7 +152,8 @@ class MobileNetV3(nn.Module):
                  last_channel: int,
                  num_classes: int = 1000,
                  block: Optional[Callable[..., nn.Module]] = None,
-                 norm_layer: Optional[Callable[..., nn.Module]] = None):
+                 norm_layer: Optional[Callable[..., nn.Module]] = None,
+                 in_channels: int = 10):
         super(MobileNetV3, self).__init__()
 
         if not inverted_residual_setting:
@@ -171,7 +172,7 @@ class MobileNetV3(nn.Module):
 
         # building first layer
         firstconv_output_c = inverted_residual_setting[0].input_c
-        layers.append(ConvBNActivation(3,
+        layers.append(ConvBNActivation(in_channels,
                                        firstconv_output_c,
                                        kernel_size=3,
                                        stride=2,
@@ -223,7 +224,7 @@ class MobileNetV3(nn.Module):
 
 def mobilenet_v3_large(num_classes: int = 1000,
                        reduced_tail: bool = False,
-                       dilated: bool = False) -> MobileNetV3:
+                       dilated: bool = False, in_channels: int = 10) -> MobileNetV3:
     """
     Constructs a large MobileNetV3 architecture from
     "Searching for MobileNetV3" <https://arxiv.org/abs/1905.02244>.
@@ -267,12 +268,12 @@ def mobilenet_v3_large(num_classes: int = 1000,
 
     return MobileNetV3(inverted_residual_setting=inverted_residual_setting,
                        last_channel=last_channel,
-                       num_classes=num_classes)
+                       num_classes=num_classes, in_channels=in_channels)
 
 
 def mobilenet_v3_small(num_classes: int = 1000,
                        reduced_tail: bool = False,
-                       dilated: bool = False) -> MobileNetV3:
+                       dilated: bool = False, in_channels: int = 10) -> MobileNetV3:
     """
     Constructs a large MobileNetV3 architecture from
     "Searching for MobileNetV3" <https://arxiv.org/abs/1905.02244>.
@@ -312,4 +313,4 @@ def mobilenet_v3_small(num_classes: int = 1000,
 
     return MobileNetV3(inverted_residual_setting=inverted_residual_setting,
                        last_channel=last_channel,
-                       num_classes=num_classes)
+                       num_classes=num_classes, in_channels=in_channels)
