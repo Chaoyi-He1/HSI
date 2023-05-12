@@ -1,7 +1,8 @@
 import os
-
+import scipy.io as sio
 import torch.utils.data as data
 from PIL import Image
+import numpy as np
 
 
 class HSI_Segmentation(data.Dataset):
