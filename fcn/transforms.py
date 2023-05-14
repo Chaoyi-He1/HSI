@@ -37,10 +37,10 @@ class RandomResize(object):
     def __call__(self, image, target):
         size = random.randint(self.min_size, self.max_size)
         # 这里size传入的是int类型，所以是将图像的最小边长缩放到size大小
-        image = F.resize(image, size)
+        image = F.resize(image, size, antialias=True)
         # 这里的interpolation注意下，在torchvision(0.9.0)以后才有InterpolationMode.NEAREST
         # 如果是之前的版本需要使用PIL.Image.NEAREST
-        target = F.resize(target, size, interpolation=T.InterpolationMode.NEAREST)
+        target = F.resize(target, size, interpolation=T.InterpolationMode.NEAREST, antialias=True)
         return image, target
 
 
@@ -62,7 +62,7 @@ class RandomCrop(object):
     def __call__(self, image, target):
         image = pad_if_smaller(image, self.size)
         target = pad_if_smaller(target, self.size, fill=255)
-        crop_params = T.RandomCrop.get_params(image, (self.size, self.size))
+        crop_params = T.RandomCrop.get_params(image, (self.size, self.size), antialias=True)
         image = F.crop(image, *crop_params)
         target = F.crop(target, *crop_params)
         return image, target
@@ -73,8 +73,8 @@ class CenterCrop(object):
         self.size = size
 
     def __call__(self, image, target):
-        image = F.center_crop(image, self.size)
-        target = F.center_crop(target, self.size)
+        image = F.center_crop(image, self.size, antialias=True)
+        target = F.center_crop(target, self.size, antialias=True)
         return image, target
 
 

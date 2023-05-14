@@ -12,15 +12,15 @@ import transforms as T
 
 class SegmentationPresetTrain:
     def __init__(self, base_size, crop_size, hflip_prob=0.5, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
-        min_size = int(0.5 * base_size)
-        max_size = int(2.0 * base_size)
+        min_size = int(0.8 * base_size)
+        max_size = int(1.05 * base_size)
 
-        trans = [T.RandomResize(min_size, max_size)]
+        trans = [T.ToTensor()]
         if hflip_prob > 0:
             trans.append(T.RandomHorizontalFlip(hflip_prob))
         trans.extend([
             T.RandomCrop(crop_size),
-            T.ToTensor(),
+            T.RandomResize(min_size, max_size),
             # T.Normalize(mean=mean, std=std),
         ])
         self.transforms = T.Compose(trans)
@@ -32,8 +32,8 @@ class SegmentationPresetTrain:
 class SegmentationPresetEval:
     def __init__(self, base_size, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
         self.transforms = T.Compose([
-            T.RandomResize(base_size, base_size),
             T.ToTensor(),
+            T.RandomResize(base_size, base_size),
             # T.Normalize(mean=mean, std=std),
         ])
 
@@ -42,8 +42,8 @@ class SegmentationPresetEval:
 
 
 def get_transform(train):
-    base_size = 520
-    crop_size = 480
+    base_size = 1400
+    crop_size = 1400
 
     return SegmentationPresetTrain(base_size, crop_size) if train else SegmentationPresetEval(base_size)
 
@@ -130,7 +130,7 @@ def main(args):
 
     optimizer = torch.optim.Adam(
         params_to_optimize,
-        lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
+        lr=args.lr, weight_decay=args.weight_decay)
 
     scaler = torch.cuda.amp.GradScaler() if args.amp else None
 
@@ -158,7 +158,7 @@ def main(args):
 
     print("Start training")
     start_time = time.time()
-    for epoch in range(args.start_epoch, args.epochs):
+    for epoch in range(args.start_epoch, args.epochs + args.start_epoch):
         if args.distributed:
             train_sampler.set_epoch(epoch)
         mean_loss, lr = train_one_epoch(model, optimizer, train_data_loader, device, epoch,
@@ -217,7 +217,7 @@ if __name__ == "__main__":
     # 指定接着从哪个epoch数开始训练
     parser.add_argument('--start_epoch', default=0, type=int, help='start epoch')
     # 训练的总epoch数
-    parser.add_argument('--epochs', default=20, type=int, metavar='N',
+    parser.add_argument('--epochs', default=200, type=int, metavar='N',
                         help='number of total epochs to run')
     # 是否使用同步BN(在多个GPU之间同步)，默认不开启，开启后训练速度会变慢
     parser.add_argument('--sync_bn', type=bool, default=False, help='whether using SyncBatchNorm')
@@ -239,7 +239,7 @@ if __name__ == "__main__":
     # 文件保存地址
     parser.add_argument('--output-dir', default='./lraspp/multi_train/OSP/', help='path where to save')
     # 基于上次的训练结果接着训练
-    parser.add_argument('--resume', default='', help='resume from checkpoint')
+    parser.add_argument('--resume', default='./lraspp/multi_train/OSP/model_157.pth', help='resume from checkpoint')
     # 不训练，仅测试
     parser.add_argument(
         "--test-only",
