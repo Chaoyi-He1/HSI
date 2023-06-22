@@ -3,6 +3,8 @@ import scipy.io as sio
 import torch.utils.data as data
 from PIL import Image
 import numpy as np
+from torch import Tensor
+import torch
 
 
 class HSI_Segmentation(data.Dataset):
@@ -18,6 +20,35 @@ class HSI_Segmentation(data.Dataset):
         assert os.path.isdir(data_path), "path '{}' does not exist.".format(data_path)
         self.img_folder_list = os.listdir(data_path)
         self.img_type = img_type
+        self.label_mapping = {
+            0: "road",
+            1: "sidewalk",
+            2: "building",
+            3: "wall",
+            4: "fence",
+            5: "pole",
+            6: "traffic light",
+            7: "traffic sign",
+            8: "vegetation",
+            9: "terrain",
+            10: "sky",
+            11: "person",
+            12: "rider",
+            13: "car",
+            14: "truck",
+            15: "bus",
+            16: "train",
+            17: "motorcycle",
+            18: "bicycle",
+            19: "background"
+        }
+        self.ignore_labels = [4, 5, 8, 9]
+        self.new_label_mapping = {}
+        new_label = 0
+        for k, v in self.label_mapping.items():
+            if k not in self.ignore_labels:
+                self.new_label_mapping[new_label] = v
+                new_label += 1
 
         if img_type != 'rgb':
             self.img_files = [os.path.join(data_path, img_folder, file)
@@ -63,6 +94,18 @@ class HSI_Segmentation(data.Dataset):
 
     def __len__(self):
         return len(self.img_files)
+
+    def ignore_label(self, target: Tensor):
+        new_label = 0
+        remapped_target = target.clone()
+        for l in range(20):
+            if l.item() not in self.ignore_labels:
+                remapped_target[target == l] = new_label
+                new_label += 1
+            else:
+                remapped_target[target == l] = 255
+        
+        return remapped_target
 
     @staticmethod
     def collate_fn(batch):
