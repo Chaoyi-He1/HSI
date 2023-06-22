@@ -210,7 +210,7 @@ if __name__ == "__main__":
     # 训练设备类型
     parser.add_argument('--device', default='cuda', help='device')
     # 检测目标类别数(不包含背景)
-    parser.add_argument('--num-classes', default=19, type=int, help='num_classes')
+    parser.add_argument('--num-classes', default=14, type=int, help='num_classes')
     # 每块GPU上的batch_size
     parser.add_argument('-b', '--batch-size', default=4, type=int,
                         help='images per gpu, the total batch size is $NGPU x batch_size')
@@ -239,7 +239,7 @@ if __name__ == "__main__":
     # 文件保存地址
     parser.add_argument('--output-dir', default='./lraspp/multi_train/OSP/', help='path where to save')
     # 基于上次的训练结果接着训练
-    parser.add_argument('--resume', default='./lraspp/multi_train/OSP/model_157.pth', help='resume from checkpoint')
+    parser.add_argument('--resume', default='', help='resume from checkpoint')
     # 不训练，仅测试
     parser.add_argument(
         "--test-only",
