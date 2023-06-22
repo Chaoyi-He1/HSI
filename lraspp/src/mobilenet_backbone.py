@@ -297,17 +297,17 @@ def mobilenet_v3_small(num_classes: int = 1000,
 
     inverted_residual_setting = [
         # input_c, kernel, expanded_c, out_c, use_se, activation, stride, dilation
-        bneck_conf(16, 3, 16, 16, True, "RE", 2, 1),  # C1
-        bneck_conf(16, 3, 72, 24, False, "RE", 2, 1),  # C2
-        bneck_conf(24, 3, 88, 24, False, "RE", 1, 1),
-        bneck_conf(24, 5, 96, 40, True, "HS", 2, 1),  # C3
-        bneck_conf(40, 5, 240, 40, True, "HS", 1, 1),
-        bneck_conf(40, 5, 240, 40, True, "HS", 1, 1),
-        bneck_conf(40, 5, 120, 48, True, "HS", 1, 1),
-        bneck_conf(48, 5, 144, 48, True, "HS", 1, 1),
-        bneck_conf(48, 5, 288, 96 // reduce_divider, True, "HS", 2, dilation),  # C4
-        bneck_conf(96 // reduce_divider, 5, 576 // reduce_divider, 96 // reduce_divider, True, "HS", 1, dilation),
-        bneck_conf(96 // reduce_divider, 5, 576 // reduce_divider, 96 // reduce_divider, True, "HS", 1, dilation)
+        bneck_conf(16, 7, 16, 16, True, "RE", 2, 1),  # C1
+        bneck_conf(16, 7, 72, 24, False, "RE", 2, 1),  # C2
+        bneck_conf(24, 7, 88, 24, False, "RE", 1, 1),
+        bneck_conf(24, 9, 96, 40, True, "HS", 2, 1),  # C3
+        bneck_conf(40, 9, 240, 40, True, "HS", 1, 1),
+        bneck_conf(40, 9, 240, 40, True, "HS", 1, 1),
+        bneck_conf(40, 9, 120, 48, True, "HS", 1, 1),
+        bneck_conf(48, 9, 144, 48, True, "HS", 1, 1),
+        bneck_conf(48, 9, 288, 96 // reduce_divider, True, "HS", 2, dilation),  # C4
+        bneck_conf(96 // reduce_divider, 13, 576 // reduce_divider, 96 // reduce_divider, True, "HS", 1, dilation),
+        bneck_conf(96 // reduce_divider, 13, 576 // reduce_divider, 96 // reduce_divider, True, "HS", 1, dilation)
     ]
     last_channel = adjust_channels(1024 // reduce_divider)  # C5
 

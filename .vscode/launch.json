@@ -13,8 +13,8 @@
             "args": [
                 "--nproc_per_node", "2", 
                 "--use_env",
-                "./Support_Vector_Regression/main.py",
-                // "./fcn/train_multi_GPU.py",
+                // "./Support_Vector_Regression/main.py",
+                "./lraspp/train_multi_GPU.py",
                 // "--img_type", "OSP",
             ]
         }
