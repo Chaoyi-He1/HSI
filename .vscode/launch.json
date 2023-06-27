@@ -15,7 +15,8 @@
                 "--use_env",
                 // "./Support_Vector_Regression/main.py",
                 "./lraspp/train_multi_GPU.py",
-                // "--img_type", "OSP",
+                "--img_type", "rgb",
+                "--output-dir", "./lraspp/multi_train/rgb/"
             ]
         }
     ]

@@ -42,7 +42,7 @@ class HSI_Segmentation(data.Dataset):
             18: "bicycle",
             19: "background"
         }
-        self.ignore_labels = [4, 5, 7, 9, 12]
+        self.ignore_labels = [4, 5, 7, 9, 12]   # [1, 4, 5, 9, 14, 16, 17, 18]
         self.new_label_mapping = {}
         new_label = 0
         for k, v in self.label_mapping.items():
@@ -90,6 +90,7 @@ class HSI_Segmentation(data.Dataset):
         if self.transforms is not None:
             img, target = self.transforms(img, target)
         target[target == 255] = 19
+        target = self.ignore_label(target)
         return img, target
 
     def __len__(self):
@@ -99,7 +100,7 @@ class HSI_Segmentation(data.Dataset):
         new_label = 0
         remapped_target = target.clone()
         for l in range(20):
-            if l.item() not in self.ignore_labels:
+            if l not in self.ignore_labels:
                 remapped_target[target == l] = new_label
                 new_label += 1
             else:
