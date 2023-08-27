@@ -5,9 +5,9 @@ from PIL import Image
 import numpy as np
 
 
-new_data_folder = '/data2/chaoyi/HSI Dataset/segments/RexKim150imagesDone'
+new_data_folder = '/data2/chaoyi/HSI Dataset/V2/New folder'
 train_folder = '/data2/chaoyi/HSI Dataset/V2/train'
-val_folder = '/data2/chaoyi/HSI Dataset/V2/val'
+val_folder = '/data2/chaoyi/HSI Dataset/V2/test'
 
 imgs = []
 img_folder_list = os.listdir(new_data_folder)

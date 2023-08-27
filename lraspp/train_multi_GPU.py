@@ -8,6 +8,7 @@ from src import lraspp_mobilenetv3_large, lraspp_mobilenetv3_small
 from train_utils import train_one_epoch, evaluate, create_lr_scheduler, init_distributed_mode, save_on_master, mkdir
 from my_dataset import HSI_Segmentation
 import transforms as T
+from torch.utils.tensorboard import SummaryWriter
 
 
 class SegmentationPresetTrain:
@@ -72,6 +73,9 @@ def create_model(num_classes, large=False, pretrain=False, in_chans=10):
 def main(args):
     init_distributed_mode(args)
     print(args)
+    if args.rank in [-1, 0]:
+        print('Start Tensorboard with "tensorboard --logdir=runs", view at http://localhost:6006/')
+        tb_writer = SummaryWriter(comment=os.path.join("runs", args.img_type, args.name))
 
     device = torch.device(args.device)
     # segmentation nun_classes + background
@@ -165,11 +169,26 @@ def main(args):
                                         lr_scheduler=lr_scheduler, print_freq=args.print_freq, scaler=scaler)
 
         confmat = evaluate(model, val_data_loader, device=device, num_classes=num_classes, scaler=scaler)
+        acc_global, acc, iu = confmat.compute()
         val_info = str(confmat)
         print(val_info)
 
         # 只在主进程上进行写操作
         if args.rank in [-1, 0]:
+            if tb_writer:
+                tags = ['global_correct', 
+                        'average_class_correct/background', 'average_class_correct/car', 'average_class_correct/human', 
+                        'average_class_correct/road', 'average_class_correct/traffic_light', 'average_class_correct/traffic_sign', 
+                        'average_class_correct/tree', 'average_class_correct/building', 'average_class_correct/sky', 
+                        'average_class_correct/object',
+                        'IoU/Background', 'IoU/Car', 'IoU/Human', 'IoU/Road', 'IoU/Traffic_light', 
+                        'IoU/Traffic_sign', 'IoU/Tree', 'IoU/Building', 'IoU/Sky', 'IoU/Object',
+                        'mean_IoU']
+                values = [acc_global.item() * 100] + [i for i in (acc * 100).tolist()] + \
+                         [i for i in (iu * 100).tolist()] + [iu.mean().item() * 100]
+                for x, tag in zip(values, tags):
+                    tb_writer.add_scalar(tag, x, epoch)
+                    
             # write into txt
             with open(results_file, "a") as f:
                 # 记录每个epoch对应的train_loss、lr以及验证集各指标
@@ -205,7 +224,7 @@ if __name__ == "__main__":
 
     # 训练文件的根目录(VOCdevkit)
     parser.add_argument('--train_data_path', default='/data2/chaoyi/HSI Dataset/V2/train/', help='dataset')
-    parser.add_argument('--val_data_path', default='/data2/chaoyi/HSI Dataset/V2/val/', help='dataset')
+    parser.add_argument('--val_data_path', default='/data2/chaoyi/HSI Dataset/V2/test/', help='dataset')
     parser.add_argument('--label_type', default='gray', help='label type: gray or viz')
     parser.add_argument('--img_type', default='OSP', help='image type: OSP or PCA or rgb')
     parser.add_argument('--name', default='', help='renames results.txt to results_name.txt if supplied')
