@@ -42,7 +42,7 @@ class HSI_Segmentation(data.Dataset):
             18: "bicycle",
             19: "background"
         }
-        self.ignore_labels = [4, 5, 7, 9, 12]   # [1, 4, 5, 9, 14, 16, 17, 18]
+        self.ignore_labels = []   # [1, 4, 5, 9, 14, 16, 17, 18]
         self.new_label_mapping = {}
         new_label = 0
         for k, v in self.label_mapping.items():

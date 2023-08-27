@@ -135,7 +135,7 @@ def main(args):
     scaler = torch.cuda.amp.GradScaler() if args.amp else None
 
     # 创建学习率更新策略，这里是每个step更新一次(不是每个epoch)
-    lr_scheduler = create_lr_scheduler(optimizer, len(train_data_loader), args.epochs, warmup=True)
+    lr_scheduler = create_lr_scheduler(optimizer, len(train_data_loader), args.epochs, warmup=False)
 
     # 如果传入resume参数，即上次训练的权重地址，则接着上次的参数训练
     if args.resume:
@@ -212,7 +212,7 @@ if __name__ == "__main__":
     # 训练设备类型
     parser.add_argument('--device', default='cuda', help='device')
     # 检测目标类别数(不包含背景)
-    parser.add_argument('--num-classes', default=14, type=int, help='num_classes')
+    parser.add_argument('--num-classes', default=19, type=int, help='num_classes')
     # 每块GPU上的batch_size
     parser.add_argument('-b', '--batch-size', default=8, type=int,
                         help='images per gpu, the total batch size is $NGPU x batch_size')
@@ -233,7 +233,7 @@ if __name__ == "__main__":
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                         help='momentum')
     # SGD的weight_decay参数
-    parser.add_argument('--wd', '--weight-decay', default=1e-4, type=float,
+    parser.add_argument('--wd', '--weight-decay', default=1e-8, type=float,
                         metavar='W', help='weight decay (default: 1e-4)',
                         dest='weight_decay')
     # 训练过程打印信息的频率
@@ -251,7 +251,7 @@ if __name__ == "__main__":
     )
 
     # 分布式进程数
-    parser.add_argument('--world-size', default=1, type=int,
+    parser.add_argument('--world-size', default=8, type=int,
                         help='number of distributed processes')
     parser.add_argument('--dist-url', default='env://', help='url used to set up distributed training')
     # Mixed precision training parameters
