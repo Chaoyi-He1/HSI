@@ -1851,3 +1851,5 @@ Epoch: [166]  [ 0/70]  eta: 0:25:57  lr: 0.000085  loss: 1.6062 (1.6062)  time: 
 Epoch: [166]  [20/70]  eta: 0:04:46  lr: 0.000085  loss: 1.7648 (1.6892)  time: 4.9078  data: 3.6738  max mem: 13761
 Epoch: [166]  [40/70]  eta: 0:02:57  lr: 0.000085  loss: 1.3054 (1.7171)  time: 6.0787  data: 5.1263  max mem: 13761
 Epoch: [166]  [60/70]  eta: 0:01:00  lr: 0.000085  loss: 1.4787 (1.6975)  time: 6.4201  data: 5.7128  max mem: 13761
+Epoch: [166] Total time: 0:06:49
+Test:  [  0/100]  eta: 0:06:36    time: 3.9676  data: 3.9223  max mem: 13761
