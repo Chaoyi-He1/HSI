@@ -49,12 +49,12 @@ def get_transform(train):
     return SegmentationPresetTrain(base_size, crop_size) if train else SegmentationPresetEval(base_size)
 
 
-def create_model(num_classes, large=False, pretrain=False, in_chans=10):
+def create_model(num_classes, large=True, pretrain=True, in_chans=10, freeze_bn=True):
     model = lraspp_mobilenetv3_large(num_classes=num_classes, in_channels=in_chans) \
     if large else lraspp_mobilenetv3_small(num_classes=num_classes, in_channels=in_chans)
 
     if pretrain:
-        weights_dict = torch.load("./deeplabv3_resnet50_coco.pth", map_location='cpu')
+        weights_dict = torch.load("./lraspp/lraspp_mobilenet_v3_large.pth", map_location='cpu')
         if num_classes != 21:
             # The official pre-training weights are 21 categories (including background)
             # If you train your own data set, delete the weights related to the category 
@@ -66,7 +66,11 @@ def create_model(num_classes, large=False, pretrain=False, in_chans=10):
         if len(missing_keys) != 0 or len(unexpected_keys) != 0:
             print("missing_keys: ", missing_keys)
             print("unexpected_keys: ", unexpected_keys)
-
+    if freeze_bn:
+        for name, param in model.named_parameters():
+            if "backbone" in name:
+                param.requires_grad = False
+    
     return model
 
 
@@ -177,12 +181,21 @@ def main(args):
         if args.rank in [-1, 0]:
             if tb_writer:
                 tags = ['global_correct', 
-                        'average_class_correct/background', 'average_class_correct/car', 'average_class_correct/human', 
-                        'average_class_correct/road', 'average_class_correct/traffic_light', 'average_class_correct/traffic_sign', 
-                        'average_class_correct/tree', 'average_class_correct/building', 'average_class_correct/sky', 
-                        'average_class_correct/object',
-                        'IoU/Background', 'IoU/Car', 'IoU/Human', 'IoU/Road', 'IoU/Traffic_light', 
-                        'IoU/Traffic_sign', 'IoU/Tree', 'IoU/Building', 'IoU/Sky', 'IoU/Object',
+                        'average_class_correct/road', 'average_class_correct/sidewalk', 'average_class_correct/building', 
+                        'average_class_correct/wall', 'average_class_correct/fence', 'average_class_correct/pole', 
+                        'average_class_correct/traffic light', 'average_class_correct/traffic sign', 'average_class_correct/vegetation', 
+                        'average_class_correct/terrain', 'average_class_correct/sky', 'average_class_correct/person',
+                        'average_class_correct/rider', 'average_class_correct/car', 'average_class_correct/truck',
+                        'average_class_correct/bus', 'average_class_correct/train', 'average_class_correct/motorcycle',
+                        'average_class_correct/bicycle', 'average_class_correct/background',
+                        
+                        'IoU/road', 'IoU/sidewalk', 'IoU/building', 
+                        'IoU/wall', 'IoU/fence', 'IoU/pole', 
+                        'IoU/traffic light', 'IoU/traffic sign', 'IoU/vegetation', 
+                        'IoU/terrain', 'IoU/sky', 'IoU/person',
+                        'IoU/rider', 'IoU/car', 'IoU/truck',
+                        'IoU/bus', 'IoU/train', 'IoU/motorcycle',
+                        'IoU/bicycle', 'IoU/background',
                         'mean_IoU']
                 values = [acc_global.item() * 100] + [i for i in (acc * 100).tolist()] + \
                          [i for i in (iu * 100).tolist()] + [iu.mean().item() * 100]
@@ -252,7 +265,7 @@ if __name__ == "__main__":
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                         help='momentum')
     # SGD的weight_decay参数
-    parser.add_argument('--wd', '--weight-decay', default=1e-8, type=float,
+    parser.add_argument('--wd', '--weight-decay', default=0, type=float,
                         metavar='W', help='weight decay (default: 1e-4)',
                         dest='weight_decay')
     # 训练过程打印信息的频率

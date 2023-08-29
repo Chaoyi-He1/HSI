@@ -153,7 +153,7 @@ class MobileNetV3(nn.Module):
                  num_classes: int = 1000,
                  block: Optional[Callable[..., nn.Module]] = None,
                  norm_layer: Optional[Callable[..., nn.Module]] = None,
-                 in_channels: int = 10):
+                 in_channels: int = 3):
         super(MobileNetV3, self).__init__()
 
         if not inverted_residual_setting:
@@ -169,7 +169,7 @@ class MobileNetV3(nn.Module):
             norm_layer = partial(nn.BatchNorm2d, eps=0.001, momentum=0.01)
 
         layers: List[nn.Module] = []
-
+        self.in_channels = in_channels
         # building first layer
         firstconv_output_c = inverted_residual_setting[0].input_c
         layers.append(ConvBNActivation(in_channels,
@@ -224,7 +224,7 @@ class MobileNetV3(nn.Module):
 
 def mobilenet_v3_large(num_classes: int = 1000,
                        reduced_tail: bool = False,
-                       dilated: bool = False, in_channels: int = 10) -> MobileNetV3:
+                       dilated: bool = False, in_channels: int = 3) -> MobileNetV3:
     """
     Constructs a large MobileNetV3 architecture from
     "Searching for MobileNetV3" <https://arxiv.org/abs/1905.02244>.

@@ -83,13 +83,20 @@ class LRASPP(nn.Module):
                  low_channels: int,
                  high_channels: int,
                  num_classes: int,
-                 inter_channels: int = 128) -> None:
+                 inter_channels: int = 128,
+                 in_channels: int = 10) -> None:
         super(LRASPP, self).__init__()
         self.backbone = backbone
+        self.in_channel_proj = nn.Conv2d(in_channels=in_channels,
+                                         out_channels=3,
+                                         kernel_size=1) \
+                                if in_channels != 3 else \
+                                None
         self.classifier = LRASPPHead(low_channels, high_channels, num_classes, inter_channels)
 
     def forward(self, x: Tensor) -> Dict[str, Tensor]:
         input_shape = x.shape[-2:]
+        x = self.in_channel_proj(x) if self.in_channel_proj is not None else x
         features = self.backbone(x)
         out = self.classifier(features)
         out = F.interpolate(out, size=input_shape, mode="bilinear", align_corners=False)
@@ -135,7 +142,7 @@ class LRASPPHead(nn.Module):
 def lraspp_mobilenetv3_large(num_classes=20, pretrain_backbone=False, in_channels=10):
     # 'mobilenetv3_large_imagenet': 'https://download.pytorch.org/models/mobilenet_v3_large-8738ca79.pth'
     # 'lraspp_mobilenet_v3_large_coco': 'https://download.pytorch.org/models/lraspp_mobilenet_v3_large-d234d4ea.pth'
-    backbone = mobilenet_v3_large(dilated=True, in_channels=in_channels)
+    backbone = mobilenet_v3_large(dilated=True)
 
     if pretrain_backbone:
         # 载入mobilenetv3 large backbone预训练权重
@@ -154,13 +161,13 @@ def lraspp_mobilenetv3_large(num_classes=20, pretrain_backbone=False, in_channel
     return_layers = {str(low_pos): "low", str(high_pos): "high"}
     backbone = IntermediateLayerGetter(backbone, return_layers=return_layers)
 
-    model = LRASPP(backbone, low_channels, high_channels, num_classes)
+    model = LRASPP(backbone, low_channels, high_channels, num_classes, 128, in_channels)
     return model
 
 def lraspp_mobilenetv3_small(num_classes=20, pretrain_backbone=False, in_channels=10):
     # 'mobilenetv3_large_imagenet': 'https://download.pytorch.org/models/mobilenet_v3_large-8738ca79.pth'
     # 'lraspp_mobilenet_v3_large_coco': 'https://download.pytorch.org/models/lraspp_mobilenet_v3_large-d234d4ea.pth'
-    backbone = mobilenet_v3_small(dilated=True, in_channels=in_channels)
+    backbone = mobilenet_v3_small(dilated=True)
 
     if pretrain_backbone:
         backbone.load_state_dict(torch.load("mobilenet_v3_large.pth", map_location='cpu'))
@@ -178,5 +185,5 @@ def lraspp_mobilenetv3_small(num_classes=20, pretrain_backbone=False, in_channel
     return_layers = {str(low_pos): "low", str(high_pos): "high"}
     backbone = IntermediateLayerGetter(backbone, return_layers=return_layers)
 
-    model = LRASPP(backbone, low_channels, high_channels, num_classes)
+    model = LRASPP(backbone, low_channels, high_channels, num_classes, 128, in_channels)
     return model
