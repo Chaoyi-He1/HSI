@@ -76,8 +76,13 @@ class FCN(nn.Module):
     """
     __constants__ = ['aux_classifier']
 
-    def __init__(self, backbone, classifier, aux_classifier=None):
+    def __init__(self, backbone, classifier, aux_classifier=None, in_channels=10):
         super(FCN, self).__init__()
+        self.in_channel_proj = nn.Conv2d(in_channels=in_channels,
+                                         out_channels=3,
+                                         kernel_size=1) \
+                                if in_channels != 3 else \
+                                None
         self.backbone = backbone
         self.classifier = classifier
         self.aux_classifier = aux_classifier
@@ -85,6 +90,7 @@ class FCN(nn.Module):
     def forward(self, x: Tensor) -> Dict[str, Tensor]:
         input_shape = x.shape[-2:]
         # contract: features is a dict of tensors
+        x = self.in_channel_proj(x) if self.in_channel_proj is not None else x
         features = self.backbone(x)
 
         result = OrderedDict()
@@ -121,7 +127,7 @@ class FCNHead(nn.Sequential):
 def fcn_resnet50(aux, num_classes=21, pretrain_backbone=False, in_channel=10):
     # 'resnet50_imagenet': 'https://download.pytorch.org/models/resnet50-0676ba61.pth'
     # 'fcn_resnet50_coco': 'https://download.pytorch.org/models/fcn_resnet50_coco-1167a1af.pth'
-    backbone = resnet50(replace_stride_with_dilation=[False, True, True], in_channel=in_channel)
+    backbone = resnet50(replace_stride_with_dilation=[False, True, True], in_channel=3)
 
     if pretrain_backbone:
         # 载入resnet50 backbone预训练权重
@@ -142,7 +148,7 @@ def fcn_resnet50(aux, num_classes=21, pretrain_backbone=False, in_channel=10):
 
     classifier = FCNHead(out_inplanes, num_classes)
 
-    model = FCN(backbone, classifier, aux_classifier)
+    model = FCN(backbone, classifier, aux_classifier, in_channels=in_channel)
 
     return model
 

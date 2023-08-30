@@ -9,6 +9,8 @@ SVR_weights/
 /lraspp/multi_train/
 /lraspp/__pycache__/
 /fcn/__pycache__/
+/fcn/multi_train/__pycache__/
+/fcn/src/__pycache__/
 /u2net/__pycache__/
 /Support_Vector_Regression/__pycache__/
 *.txt
