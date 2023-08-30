@@ -124,14 +124,14 @@ class FCNHead(nn.Sequential):
         super(FCNHead, self).__init__(*layers)
 
 
-def fcn_resnet50(aux, num_classes=21, pretrain_backbone=False, in_channel=10):
+def fcn_resnet50(aux, num_classes=21, pretrain_backbone=True, in_channel=10):
     # 'resnet50_imagenet': 'https://download.pytorch.org/models/resnet50-0676ba61.pth'
     # 'fcn_resnet50_coco': 'https://download.pytorch.org/models/fcn_resnet50_coco-1167a1af.pth'
     backbone = resnet50(replace_stride_with_dilation=[False, True, True], in_channel=3)
 
     if pretrain_backbone:
         # 载入resnet50 backbone预训练权重
-        backbone.load_state_dict(torch.load("resnet50.pth", map_location='cpu'))
+        backbone.load_state_dict(torch.load("./src/resnet50.pth", map_location='cpu'))
 
     out_inplanes = 2048
     aux_inplanes = 1024
