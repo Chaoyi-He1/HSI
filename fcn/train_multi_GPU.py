@@ -64,6 +64,10 @@ def create_model(aux, num_classes, args):
     # if len(missing_keys) != 0 or len(unexpected_keys) != 0:
     #     print("missing_keys: ", missing_keys)
     #     print("unexpected_keys: ", unexpected_keys)
+    
+    # for name, param in model.named_parameters():
+    #     if 'backbone' in name:
+    #         param.requires_grad = False
 
     return model
 
@@ -151,9 +155,9 @@ def main(args):
         # which would result in all processes on the same machine using the same set of devices.
         checkpoint = torch.load(args.resume, map_location='cpu')  # 读取之前保存的权重文件(包括优化器以及学习率策略)
         model_without_ddp.load_state_dict(checkpoint['model'])
-        optimizer.load_state_dict(checkpoint['optimizer'])
-        lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
-        args.start_epoch = checkpoint['epoch'] + 1
+        # optimizer.load_state_dict(checkpoint['optimizer'])
+        # lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
+        # args.start_epoch = checkpoint['epoch'] + 1
         if args.amp:
             scaler.load_state_dict(checkpoint["scaler"])
 
@@ -233,7 +237,7 @@ if __name__ == "__main__":
     # 检测目标类别数(不包含背景)
     parser.add_argument('--num-classes', default=19, type=int, help='num_classes')
     # 每块GPU上的batch_size
-    parser.add_argument('-b', '--batch-size', default=1, type=int,
+    parser.add_argument('-b', '--batch-size', default=2, type=int,
                         help='images per gpu, the total batch size is $NGPU x batch_size')
     parser.add_argument("--aux", default=False, type=bool, help="auxilier loss")
     # 指定接着从哪个epoch数开始训练
@@ -261,7 +265,7 @@ if __name__ == "__main__":
     # 文件保存地址
     parser.add_argument('--output-dir', default='./fcn/multi_train/OSP/', help='path where to save')
     # 基于上次的训练结果接着训练
-    parser.add_argument('--resume', default='', help='resume from checkpoint')
+    parser.add_argument('--resume', default='./fcn/multi_train/OSP/model_199.pth', help='resume from checkpoint')
     # 不训练，仅测试
     parser.add_argument(
         "--test-only",

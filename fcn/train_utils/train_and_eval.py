@@ -65,7 +65,7 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, lr_scheduler, 
 def create_lr_scheduler(optimizer,
                         num_step: int,
                         epochs: int,
-                        warmup=True,
+                        warmup=False,
                         warmup_epochs=1,
                         warmup_factor=1e-3):
     assert num_step > 0 and epochs > 0

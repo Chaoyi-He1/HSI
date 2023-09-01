@@ -131,7 +131,7 @@ def fcn_resnet50(aux, num_classes=21, pretrain_backbone=True, in_channel=10):
 
     if pretrain_backbone:
         # 载入resnet50 backbone预训练权重
-        backbone.load_state_dict(torch.load("./src/resnet50.pth", map_location='cpu'))
+        backbone.load_state_dict(torch.load("./fcn/src/resnet50.pth", map_location='cpu'))
 
     out_inplanes = 2048
     aux_inplanes = 1024
