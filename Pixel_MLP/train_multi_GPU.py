@@ -4,7 +4,7 @@ import datetime
 
 import torch
 
-from src import lraspp_mobilenetv3_large, lraspp_mobilenetv3_small
+from src import get_model
 from train_utils import train_one_epoch, evaluate, create_lr_scheduler, init_distributed_mode, save_on_master, mkdir
 from my_dataset import HSI_Segmentation
 import transforms as T
@@ -49,9 +49,8 @@ def get_transform(train):
     return SegmentationPresetTrain(base_size, crop_size) if train else SegmentationPresetEval(base_size)
 
 
-def create_model(num_classes, large=True, pretrain=True, in_chans=10, freeze_bn=True):
-    model = lraspp_mobilenetv3_large(num_classes=num_classes, in_channels=in_chans) \
-    if large else lraspp_mobilenetv3_small(num_classes=num_classes, in_channels=in_chans)
+def create_model(model_name="mlp_pixel", num_classes=18, pretrain=False, in_chans=10):
+    model = get_model(model_name, num_classes=num_classes, in_channels=in_chans)
 
     if pretrain:
         weights_dict = torch.load("./lraspp/lraspp_mobilenet_v3_large.pth", map_location='cpu')
@@ -66,10 +65,6 @@ def create_model(num_classes, large=True, pretrain=True, in_chans=10, freeze_bn=
         if len(missing_keys) != 0 or len(unexpected_keys) != 0:
             print("missing_keys: ", missing_keys)
             print("unexpected_keys: ", unexpected_keys)
-    if freeze_bn:
-        for name, param in model.named_parameters():
-            if "backbone" in name:
-                param.requires_grad = False
     
     return model
 
@@ -246,17 +241,17 @@ if __name__ == "__main__":
     # 检测目标类别数(不包含背景)
     parser.add_argument('--num-classes', default=19, type=int, help='num_classes')
     # 每块GPU上的batch_size
-    parser.add_argument('-b', '--batch-size', default=8, type=int,
+    parser.add_argument('-b', '--batch-size', default=1, type=int,
                         help='images per gpu, the total batch size is $NGPU x batch_size')
     # 指定接着从哪个epoch数开始训练
     parser.add_argument('--start_epoch', default=0, type=int, help='start epoch')
     # 训练的总epoch数
-    parser.add_argument('--epochs', default=1000, type=int, metavar='N',
+    parser.add_argument('--epochs', default=300, type=int, metavar='N',
                         help='number of total epochs to run')
     # 是否使用同步BN(在多个GPU之间同步)，默认不开启，开启后训练速度会变慢
     parser.add_argument('--sync_bn', type=bool, default=False, help='whether using SyncBatchNorm')
     # 数据加载以及预处理的线程数
-    parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
+    parser.add_argument('-j', '--workers', default=8, type=int, metavar='N',
                         help='number of data loading workers (default: 4)')
     # 训练学习率，这里默认设置成0.0001，如果效果不好可以尝试加大学习率
     parser.add_argument('--lr', default=0.0001, type=float,
@@ -271,9 +266,9 @@ if __name__ == "__main__":
     # 训练过程打印信息的频率
     parser.add_argument('--print-freq', default=20, type=int, help='print frequency')
     # 文件保存地址
-    parser.add_argument('--output-dir', default='./lraspp/multi_train/OSP/', help='path where to save')
+    parser.add_argument('--output-dir', default='./Pixel_MLP/multi_train/OSP/', help='path where to save')
     # 基于上次的训练结果接着训练
-    parser.add_argument('--resume', default='./lraspp/multi_train/OSP/model_0167.pth', help='resume from checkpoint')
+    parser.add_argument('--resume', default='./Pixel_MLP/multi_train/OSP/', help='resume from checkpoint')
     # 不训练，仅测试
     parser.add_argument(
         "--test-only",
