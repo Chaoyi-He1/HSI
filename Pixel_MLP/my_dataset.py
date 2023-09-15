@@ -206,3 +206,4 @@ class HSI_Transformer(data.Dataset):
         batched_imgs = torch.stack(images, dim=0).flatten(start_dim=0, end_dim=1)
         batched_targets = torch.stack(targets, dim=0).flatten(start_dim=0, end_dim=1)
         return batched_imgs[batched_targets != 255], batched_targets[batched_targets != 255]
+    
