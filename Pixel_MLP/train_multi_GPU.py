@@ -126,10 +126,7 @@ def main(args):
         model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
         model_without_ddp = model.module
 
-    params_to_optimize = [
-        {"params": [p for p in model_without_ddp.backbone.parameters() if p.requires_grad]},
-        {"params": [p for p in model_without_ddp.classifier.parameters() if p.requires_grad]},
-    ]
+    params_to_optimize = [p for p in model.parameters() if p.requires_grad]
 
     optimizer = torch.optim.Adam(
         params_to_optimize,
@@ -141,7 +138,7 @@ def main(args):
     lr_scheduler = create_lr_scheduler(optimizer, len(train_data_loader), args.epochs, warmup=False)
 
     # 如果传入resume参数，即上次训练的权重地址，则接着上次的参数训练
-    if args.resume:
+    if args.resume.endswith(".pth"):
         # If map_location is missing, torch.load will first load the module to CPU
         # and then copy each parameter to where it was saved,
         # which would result in all processes on the same machine using the same set of devices.

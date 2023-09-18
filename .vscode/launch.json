@@ -14,7 +14,7 @@
                 "--nproc_per_node", "2", 
                 "--use_env",
                 // "./Support_Vector_Regression/main.py",
-                "./fcn/train_multi_GPU.py",
+                "./Pixel_MLP/train_multi_GPU.py",
                 "--img_type", "OSP",
                 "--output-dir", "./fcn/multi_train/OSP/"
             ]

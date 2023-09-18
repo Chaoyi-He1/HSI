@@ -129,12 +129,12 @@ class HSI_Segmentation(data.Dataset):
         images, targets = list(zip(*batch))
         batched_imgs = cat_list(images, fill_value=0)
         batched_targets = cat_list(targets, fill_value=255)
-        batched_imgs = batched_imgs[batched_targets != 255]
-        batched_targets = batched_targets[batched_targets != 255]
-        batched_imgs.permute(0, 2, 3, 1).contiguous()
-        batched_targets.permute(0, 2, 3, 1).contiguous()
-        batched_imgs.flatten(start_dim=0, end_dim=-2)
-        batched_targets.flatten(start_dim=0, end_dim=-2)
+        channel = batched_imgs.shape[1]
+        pos = (batched_targets != 255)[0, 0, :, :]
+        batched_imgs = batched_imgs[..., pos]
+        batched_targets = batched_targets[..., pos]
+        batched_imgs = batched_imgs.permute(0, 2, 1).contiguous().squeeze()
+        batched_targets = batched_targets.permute(0, 2, 1).contiguous().squeeze()
         return batched_imgs, batched_targets
 
 
