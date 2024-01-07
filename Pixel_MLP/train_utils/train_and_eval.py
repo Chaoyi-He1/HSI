@@ -4,15 +4,8 @@ import train_utils.distributed_utils as utils
 
 
 def criterion(inputs, target):
-    losses = {}
-    for name, x in inputs.items():
-        # 忽略target中值为255的像素，255的像素是目标边缘或者padding填充
-        losses[name] = nn.functional.cross_entropy(x, target, ignore_index=255)
-
-    if len(losses) == 1:
-        return losses['out']
-
-    return losses['out'] + 0.5 * losses['aux']
+    losses = nn.functional.cross_entropy(inputs, target, ignore_index=255)
+    return losses
 
 
 def evaluate(model, data_loader, device, num_classes, scaler=None):
@@ -24,7 +17,7 @@ def evaluate(model, data_loader, device, num_classes, scaler=None):
         for image, target in metric_logger.log_every(data_loader, 100, header):
             image, target = image.to(device), target.to(device)
             output = model(image)
-            output = output['out']
+            # output = output['out']
 
             confmat.update(target.flatten(), output.argmax(1).flatten())
 
@@ -41,7 +34,7 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, lr_scheduler, 
 
     for image, target in metric_logger.log_every(data_loader, print_freq, header):
         image, target = image.to(device), target.to(device)
-        target = torch.squeeze(target, dim=1)
+        # target = torch.squeeze(target, dim=1)
         with torch.cuda.amp.autocast(enabled=scaler is not None):
             output = model(image)
             loss = criterion(output, target)

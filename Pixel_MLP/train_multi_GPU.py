@@ -227,46 +227,45 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description=__doc__)
 
-    # 训练文件的根目录(VOCdevkit)
-    parser.add_argument('--train_data_path', default='/data2/chaoyi/HSI Dataset/V2/train/', help='dataset')
-    parser.add_argument('--val_data_path', default='/data2/chaoyi/HSI Dataset/V2/test/', help='dataset')
+    parser.add_argument('--train_data_path', default='/data2/chaoyi/HSI_Dataset/V2/train/', help='dataset')
+    parser.add_argument('--val_data_path', default='/data2/chaoyi/HSI_Dataset/V2/test/', help='dataset')
     parser.add_argument('--label_type', default='gray', help='label type: gray or viz')
     parser.add_argument('--img_type', default='OSP', help='image type: OSP or PCA or rgb')
     parser.add_argument('--name', default='', help='renames results.txt to results_name.txt if supplied')
-    # 训练设备类型
+
     parser.add_argument('--device', default='cuda', help='device')
-    # 检测目标类别数(不包含背景)
+
     parser.add_argument('--num-classes', default=19, type=int, help='num_classes')
-    # 每块GPU上的batch_size
+
     parser.add_argument('-b', '--batch-size', default=1, type=int,
                         help='images per gpu, the total batch size is $NGPU x batch_size')
-    # 指定接着从哪个epoch数开始训练
+
     parser.add_argument('--start_epoch', default=0, type=int, help='start epoch')
-    # 训练的总epoch数
+
     parser.add_argument('--epochs', default=300, type=int, metavar='N',
                         help='number of total epochs to run')
-    # 是否使用同步BN(在多个GPU之间同步)，默认不开启，开启后训练速度会变慢
+
     parser.add_argument('--sync_bn', type=bool, default=False, help='whether using SyncBatchNorm')
-    # 数据加载以及预处理的线程数
+
     parser.add_argument('-j', '--workers', default=8, type=int, metavar='N',
                         help='number of data loading workers (default: 4)')
-    # 训练学习率，这里默认设置成0.0001，如果效果不好可以尝试加大学习率
+
     parser.add_argument('--lr', default=0.0001, type=float,
                         help='initial learning rate')
-    # SGD的momentum参数
-    parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
+
+    parser.add_argument('--momentum', default=0.4, type=float, metavar='M',
                         help='momentum')
-    # SGD的weight_decay参数
+
     parser.add_argument('--wd', '--weight-decay', default=0, type=float,
                         metavar='W', help='weight decay (default: 1e-4)',
                         dest='weight_decay')
-    # 训练过程打印信息的频率
+
     parser.add_argument('--print-freq', default=20, type=int, help='print frequency')
-    # 文件保存地址
+
     parser.add_argument('--output-dir', default='./Pixel_MLP/multi_train/OSP/', help='path where to save')
-    # 基于上次的训练结果接着训练
+
     parser.add_argument('--resume', default='./Pixel_MLP/multi_train/OSP/', help='resume from checkpoint')
-    # 不训练，仅测试
+
     parser.add_argument(
         "--test-only",
         dest="test_only",
@@ -274,7 +273,7 @@ if __name__ == "__main__":
         action="store_true",
     )
 
-    # 分布式进程数
+
     parser.add_argument('--world-size', default=8, type=int,
                         help='number of distributed processes')
     parser.add_argument('--dist-url', default='env://', help='url used to set up distributed training')
@@ -284,7 +283,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # 如果指定了保存文件地址，检查文件夹是否存在，若不存在，则创建
+
     if args.output_dir:
         mkdir(args.output_dir)
 
