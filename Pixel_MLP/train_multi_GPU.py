@@ -6,66 +6,13 @@ import torch
 
 from src import get_model
 from train_utils import train_one_epoch, evaluate, create_lr_scheduler, init_distributed_mode, save_on_master, mkdir
-from my_dataset import HSI_Segmentation
+from my_dataset import HSI_Segmentation, HSI_Transformer
 import transforms as T
 from torch.utils.tensorboard import SummaryWriter
 
 
-class SegmentationPresetTrain:
-    def __init__(self, base_size, crop_size, hflip_prob=0.5, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
-        min_size = int(0.8 * base_size)
-        max_size = int(1.05 * base_size)
-
-        trans = [T.ToTensor()]
-        if hflip_prob > 0:
-            trans.append(T.RandomHorizontalFlip(hflip_prob))
-        trans.extend([
-            T.RandomCrop(crop_size),
-            T.RandomResize(min_size, max_size),
-            # T.Normalize(mean=mean, std=std),
-        ])
-        self.transforms = T.Compose(trans)
-
-    def __call__(self, img, target):
-        return self.transforms(img, target)
-
-
-class SegmentationPresetEval:
-    def __init__(self, base_size, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
-        self.transforms = T.Compose([
-            T.ToTensor(),
-            T.RandomResize(base_size, base_size),
-            # T.Normalize(mean=mean, std=std),
-        ])
-
-    def __call__(self, img, target):
-        return self.transforms(img, target)
-
-
-def get_transform(train):
-    base_size = 1400
-    crop_size = 1400
-
-    return SegmentationPresetTrain(base_size, crop_size) if train else SegmentationPresetEval(base_size)
-
-
-def create_model(model_name="mlp_pixel", num_classes=18, pretrain=False, in_chans=10):
+def create_model(model_name="mlp_pixel", num_classes=2, in_chans=10):
     model = get_model(model_name, num_classes=num_classes, in_channels=in_chans)
-
-    if pretrain:
-        weights_dict = torch.load("./lraspp/lraspp_mobilenet_v3_large.pth", map_location='cpu')
-        if num_classes != 21:
-            # The official pre-training weights are 21 categories (including background)
-            # If you train your own data set, delete the weights related to the category 
-            # to prevent inconsistent weight shapes from reporting errors
-            for k in list(weights_dict.keys()):
-                if "low_classifier" in k or "high_classifier" in k:
-                    del weights_dict[k]
-        missing_keys, unexpected_keys = model.load_state_dict(weights_dict, strict=False)
-        if len(missing_keys) != 0 or len(unexpected_keys) != 0:
-            print("missing_keys: ", missing_keys)
-            print("unexpected_keys: ", unexpected_keys)
-    
     return model
 
 
@@ -77,25 +24,23 @@ def main(args):
         tb_writer = SummaryWriter(comment=os.path.join("runs", args.img_type, args.name))
 
     device = torch.device(args.device)
-    # segmentation nun_classes + background
-    num_classes = args.num_classes + 1
 
-    # 用来保存coco_info的文件
+    num_classes = args.num_classes
+
     results_file = "results{}.txt".format(datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
 
-    # load train data set
-    train_dataset = HSI_Segmentation(data_path=args.train_data_path,
-                                     label_type=args.label_type,
-                                     img_type=args.img_type,
-                                     transforms=get_transform(train=True))
-    # load validation data set
-    # VOCdevkit -> VOC2012 -> ImageSets -> Segmentation -> val.txt
-    val_dataset = HSI_Segmentation(data_path=args.val_data_path,
-                                   label_type=args.label_type,
-                                   img_type=args.img_type,
-                                   transforms=get_transform(train=False))
-
     print("Creating data loaders")
+    # load train data set
+    train_dataset = HSI_Transformer(data_path=args.train_data_path,
+                                    label_type=args.label_type,
+                                    img_type=args.img_type,
+                                   )
+    # load validation data set
+    val_dataset = HSI_Transformer(data_path=args.val_data_path,
+                                  label_type=args.label_type,
+                                  img_type=args.img_type,
+                                 )
+    
     if args.distributed:
         train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
         test_sampler = torch.utils.data.distributed.DistributedSampler(val_dataset)
@@ -134,7 +79,6 @@ def main(args):
 
     scaler = torch.cuda.amp.GradScaler() if args.amp else None
 
-    # 创建学习率更新策略，这里是每个step更新一次(不是每个epoch)
     lr_scheduler = create_lr_scheduler(optimizer, len(train_data_loader), args.epochs, warmup=False)
 
     # 如果传入resume参数，即上次训练的权重地址，则接着上次的参数训练
@@ -229,7 +173,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--train_data_path', default='/data2/chaoyi/HSI_Dataset/V2/train/', help='dataset')
     parser.add_argument('--val_data_path', default='/data2/chaoyi/HSI_Dataset/V2/test/', help='dataset')
-    parser.add_argument('--label_type', default='gray', help='label type: gray or viz')
+    parser.add_argument('--label_type', default='Skylabel', help='label type: gray or viz')
     parser.add_argument('--img_type', default='OSP', help='image type: OSP or PCA or rgb')
     parser.add_argument('--name', default='', help='renames results.txt to results_name.txt if supplied')
 

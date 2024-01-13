@@ -90,7 +90,7 @@ class HSI_Segmentation(data.Dataset):
 
 class HSI_Transformer(data.Dataset):
     def __init__(self, data_path: str = "", label_type: str = "gray", img_type: str = "OSP", 
-                 transforms=None, sequence_length: int = 10):
+                 sequence_length: int = 10):
         """
         Parameters:
             data_path: the path of the "HSI Dataset folder"
@@ -98,7 +98,7 @@ class HSI_Transformer(data.Dataset):
             img_type: can be either "OSP" or "PCA"
             transforms: augmentation methods for images.
         """
-        super(HSI_Segmentation, self).__init__()
+        super(HSI_Transformer, self).__init__()
         assert os.path.isdir(data_path), "path '{}' does not exist.".format(data_path)
         self.img_folder_list = os.listdir(data_path)
         self.img_type = img_type
@@ -125,13 +125,11 @@ class HSI_Transformer(data.Dataset):
         #                                + ".png") for img in self.img_files]
         
         assert (len(self.img_files) == len(self.mask_files))
-        self.transforms = transforms
 
     def __getitem__(self, index):
         """
         Args:
             index (int): Index
-
         Returns:
             tuple: (image, target) where target is the image segmentation.
         """
@@ -140,12 +138,13 @@ class HSI_Transformer(data.Dataset):
         # img = np.ascontiguousarray(img.transpose(2, 0, 1))
         # img = (img - np.min(img)) * 255 / np.max(img)
         # img = Image.fromarray(img)
-        target = Image.open(self.mask_files[index])
+        target = sio.loadmat(self.mask_files[index])["overlay"].astype(int)
 
-        if self.transforms is not None:
-            img, target = self.transforms(img, target)
-        img = img.reshape(img.shape[0], self.sequence_length, -1).permute(2, 1, 0).contiguous()
-        target = target.reshape(target.shape[0], self.sequence_length, -1).permute(2, 1, 0).contiguous()
+        img = torch.from_numpy(img)
+        target = torch.from_numpy(target)
+        
+        img = img.reshape(-1, self.sequence_length, img.shape[2]).permute(2, 1, 0).contiguous()
+        target = target.reshape(-1, self.sequence_length, target.shape[2]).permute(2, 1, 0).contiguous()
         return img, target
 
     def __len__(self):

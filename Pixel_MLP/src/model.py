@@ -5,6 +5,7 @@ from typing import Dict
 import torch
 from torch import nn, Tensor
 from torch.nn import functional as F
+from .transformer_model import build_Transformer_Encoder
 
 
 class MLP_Pixel(nn.Module):
@@ -25,6 +26,8 @@ class MLP_Pixel(nn.Module):
 def get_model(model_name: str = "mlp_pixel", num_classes: int = 18, in_channels: int = 3) -> nn.Module:
     if model_name == "mlp_pixel":
         model = MLP_Pixel(in_channels, num_classes)
+    elif model_name == "transformer":
+        model = build_Transformer_Encoder(num_cls=num_classes, d_model=in_channels)
     else:
         raise NotImplementedError(f"model {model_name} is not implemented in `get_model`")
     return model

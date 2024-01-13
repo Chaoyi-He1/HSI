@@ -1,9 +1,9 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from transformer import TransformerEncoder, TransformerDecoder
+from .transformer import Transformer_Encoder, Transformer_Decoder
 from torch import Tensor
-from positional_embedding import *
+from .positional_embedding import *
 
 
 class Transformer_Encoder_cls(nn.Module):
@@ -12,10 +12,10 @@ class Transformer_Encoder_cls(nn.Module):
                  drop_path=0.4, activation="relu", 
                  normalize_before=True, num_cls=18) -> None:
         super().__init__()
-        self.encoder = TransformerEncoder(num_layers, norm, d_model, 
-                                          nhead, dim_feedforward, dropout, 
-                                          drop_path, activation, 
-                                          normalize_before)
+        self.encoder = Transformer_Encoder(num_layers, norm, d_model, 
+                                           nhead, dim_feedforward, dropout, 
+                                           drop_path, activation, 
+                                           normalize_before)
         self.classify_head = nn.Sequential(
             nn.Linear(d_model, 2 * d_model),
             nn.ReLU(inplace=True),

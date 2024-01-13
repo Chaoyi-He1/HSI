@@ -4,7 +4,7 @@ import train_utils.distributed_utils as utils
 
 
 def criterion(inputs, target):
-    losses = nn.functional.cross_entropy(inputs, target, ignore_index=255)
+    losses = nn.functional.binary_cross_entropy_with_logits(inputs, target)
     return losses
 
 
