@@ -5,7 +5,8 @@ import train_utils.distributed_utils as utils
 
 def criterion(inputs, target):
     losses = nn.functional.binary_cross_entropy_with_logits(inputs, target)
-    return losses
+    accuracy = torch.mean(((inputs > 0) == target.byte()).float())
+    return losses, accuracy
 
 
 def evaluate(model, data_loader, device, num_classes, scaler=None):
@@ -19,7 +20,7 @@ def evaluate(model, data_loader, device, num_classes, scaler=None):
             output = model(image)
             # output = output['out']
 
-            confmat.update(target.flatten(), output.argmax(1).flatten())
+            confmat.update(target.flatten(), output.flatten())
 
         confmat.reduce_from_all_processes()
 
@@ -30,14 +31,16 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, lr_scheduler, 
     model.train()
     metric_logger = utils.MetricLogger(delimiter="  ")
     metric_logger.add_meter('lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
+    metric_logger.add_meter('loss', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
+    metric_logger.add_meter('acc', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
     header = 'Epoch: [{}]'.format(epoch)
 
     for image, target in metric_logger.log_every(data_loader, print_freq, header):
-        image, target = image.to(device), target.to(device)
+        image, target = image.to(device), target.to(device).unsqueeze(-1)
         # target = torch.squeeze(target, dim=1)
         with torch.cuda.amp.autocast(enabled=scaler is not None):
             output = model(image)
-            loss = criterion(output, target)
+            loss, acc = criterion(output, target)
 
         optimizer.zero_grad()
         if scaler is not None:
@@ -51,7 +54,7 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, lr_scheduler, 
         lr_scheduler.step()
 
         lr = optimizer.param_groups[0]["lr"]
-        metric_logger.update(loss=loss.item(), lr=lr)
+        metric_logger.update(loss=loss.item(), lr=lr, acc=acc.item())
 
     return metric_logger.meters["loss"].global_avg, lr
 

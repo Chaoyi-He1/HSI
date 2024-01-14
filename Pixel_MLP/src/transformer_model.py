@@ -33,8 +33,8 @@ class Transformer_Encoder_cls(nn.Module):
         return src
 
 
-def build_Transformer_Encoder(num_layers=8, norm=None, d_model=3, 
-                              nhead=8, dim_feedforward=2048, dropout=0.1,
+def build_Transformer_Encoder(num_layers=4, norm=None, d_model=3, 
+                              nhead=2, dim_feedforward=512, dropout=0.1,
                               drop_path=0.4, activation="relu", 
                               normalize_before=True, num_cls=18):
     

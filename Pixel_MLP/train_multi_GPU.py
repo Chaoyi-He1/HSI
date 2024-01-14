@@ -11,7 +11,7 @@ import transforms as T
 from torch.utils.tensorboard import SummaryWriter
 
 
-def create_model(model_name="mlp_pixel", num_classes=2, in_chans=10):
+def create_model(model_name="transformer", num_classes=2, in_chans=10):
     model = get_model(model_name, num_classes=num_classes, in_channels=in_chans)
     return model
 
@@ -179,7 +179,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--device', default='cuda', help='device')
 
-    parser.add_argument('--num-classes', default=19, type=int, help='num_classes')
+    parser.add_argument('--num-classes', default=1, type=int, help='num_classes')
 
     parser.add_argument('-b', '--batch-size', default=1, type=int,
                         help='images per gpu, the total batch size is $NGPU x batch_size')

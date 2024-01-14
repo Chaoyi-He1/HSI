@@ -102,6 +102,7 @@ class HSI_Transformer(data.Dataset):
         assert os.path.isdir(data_path), "path '{}' does not exist.".format(data_path)
         self.img_folder_list = os.listdir(data_path)
         self.img_type = img_type
+        self.label_type = label_type
         self.sequence_length = sequence_length
 
         if img_type != 'rgb':
@@ -121,10 +122,43 @@ class HSI_Transformer(data.Dataset):
                                        os.path.splitext(
                                            os.path.basename(img))[0].replace("_OSP10channel", "").replace(rgb, "")
                                        + "_" + label_type + '.mat') for img in self.img_files]
+        rgb = "rgb" if img_type != 'rgb' else ''
+        self.label_mask = [img.replace(img.split(os.sep)[-1], rgb
+                                       + os.path.splitext(os.path.basename(img))[0].replace("_OSP10channel", "")
+                                       + "_gray.png") for img in self.img_files]
         # self.mask_files = [img.replace(img.split(os.sep)[-1], "label_" + label_type
         #                                + ".png") for img in self.img_files]
-        
-        assert (len(self.img_files) == len(self.mask_files))
+        self.sanity_check()
+        self.label_mapping = {
+            "road": 0,
+            "sidewalk": 1,
+            "building": 2,
+            "wall": 3,
+            "fence": 4,
+            "pole": 5,
+            "traffic light": 6,
+            "traffic sign": 7,
+            "vegetation": 8,
+            "terrain": 9,
+            "sky": 10,
+            "person": 11,
+            "rider": 12,
+            "car": 13,
+            "truck": 14,
+            "bus": 15,
+            "train": 16,
+            "motorcycle": 17,
+            "bicycle": 18,
+            "background": 19,
+        }
+    
+    def sanity_check(self):
+        # if the mask file is not exist, then remove the corresponding image file and label file and mask file from the list
+        for i in range(len(self.img_files) - 1, -1, -1):
+            if not os.path.isfile(self.mask_files[i]):
+                del self.img_files[i]
+                del self.mask_files[i]
+                del self.label_mask[i]
 
     def __getitem__(self, index):
         """
@@ -133,18 +167,26 @@ class HSI_Transformer(data.Dataset):
         Returns:
             tuple: (image, target) where target is the image segmentation.
         """
+        label_index = next((i for i, k in enumerate(self.label_mapping.keys()) if k in self.label_type.lower()), None)
+        pixel_index = Image.open(self.label_mask[index])
+        pixel_index = np.array(pixel_index) == label_index
+        
         img = sio.loadmat(self.img_files[index])["filtered_img"].astype(np.float16) \
             if self.img_type != "rgb" else Image.open(self.img_files[index])
+        img = img[pixel_index, :]
+        img = img[: img.shape[0] // self.sequence_length * self.sequence_length, :]
         # img = np.ascontiguousarray(img.transpose(2, 0, 1))
         # img = (img - np.min(img)) * 255 / np.max(img)
         # img = Image.fromarray(img)
-        target = sio.loadmat(self.mask_files[index])["overlay"].astype(int)
-
+        target = sio.loadmat(self.mask_files[index])["overlay"].astype(np.float16)
+        target = target[pixel_index] 
+        target = target[: target.shape[0] // self.sequence_length * self.sequence_length]
+           
         img = torch.from_numpy(img)
         target = torch.from_numpy(target)
         
-        img = img.reshape(-1, self.sequence_length, img.shape[2]).permute(2, 1, 0).contiguous()
-        target = target.reshape(-1, self.sequence_length, target.shape[2]).permute(2, 1, 0).contiguous()
+        img = img.view(-1, self.sequence_length, img.shape[1]).contiguous()
+        target = target.view(-1, self.sequence_length).contiguous()
         return img, target
 
     def __len__(self):
@@ -153,7 +195,7 @@ class HSI_Transformer(data.Dataset):
     @staticmethod
     def collate_fn(batch):
         images, targets = list(zip(*batch))
-        batched_imgs = torch.stack(images, dim=0).flatten(start_dim=0, end_dim=1)
-        batched_targets = torch.stack(targets, dim=0).flatten(start_dim=0, end_dim=1)
-        return batched_imgs[batched_targets != 255], batched_targets[batched_targets != 255]
+        batched_imgs = torch.stack(images, dim=0).flatten(0, 1)
+        batched_targets = torch.stack(targets, dim=0).flatten(0, 1)
+        return batched_imgs, batched_targets
     
