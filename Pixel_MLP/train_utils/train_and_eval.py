@@ -11,20 +11,20 @@ def criterion(inputs, target):
 
 def evaluate(model, data_loader, device, num_classes, scaler=None):
     model.eval()
-    confmat = utils.ConfusionMatrix(num_classes)
     metric_logger = utils.MetricLogger(delimiter="  ")
+    metric_logger.add_meter('acc', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
+    metric_logger.add_meter('loss', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
     header = 'Test:'
     with torch.no_grad(), torch.cuda.amp.autocast(enabled=scaler is not None):
-        for image, target in metric_logger.log_every(data_loader, 100, header):
+        for image, target in metric_logger.log_every(data_loader, 10, header):
             image, target = image.to(device), target.to(device)
             output = model(image)
             # output = output['out']
+            loss, acc = criterion(output, target.unsqueeze(-1))
+            
+            metric_logger.update(loss=loss.item(), acc=acc.item())
 
-            confmat.update(target.flatten(), output.flatten())
-
-        confmat.reduce_from_all_processes()
-
-    return confmat
+    return metric_logger.meters['loss'].global_avg, metric_logger.meters['acc'].global_avg
 
 
 def train_one_epoch(model, optimizer, data_loader, device, epoch, lr_scheduler, print_freq=10, scaler=None):
@@ -41,6 +41,7 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, lr_scheduler, 
         with torch.cuda.amp.autocast(enabled=scaler is not None):
             output = model(image)
             loss, acc = criterion(output, target)
+            assert not torch.isnan(loss), 'Model diverged with loss = NaN'
 
         optimizer.zero_grad()
         if scaler is not None:
@@ -56,7 +57,8 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, lr_scheduler, 
         lr = optimizer.param_groups[0]["lr"]
         metric_logger.update(loss=loss.item(), lr=lr, acc=acc.item())
 
-    return metric_logger.meters["loss"].global_avg, lr
+    return metric_logger.meters["loss"].global_avg, \
+           metric_logger.meters["acc"].global_avg, lr
 
 
 def create_lr_scheduler(optimizer,

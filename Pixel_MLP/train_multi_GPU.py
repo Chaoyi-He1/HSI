@@ -105,36 +105,33 @@ def main(args):
     for epoch in range(args.start_epoch, args.epochs + args.start_epoch):
         if args.distributed:
             train_sampler.set_epoch(epoch)
-        mean_loss, lr = train_one_epoch(model, optimizer, train_data_loader, device, epoch,
+        mean_loss, mean_acc, lr = train_one_epoch(model, optimizer, train_data_loader, device, epoch,
                                         lr_scheduler=lr_scheduler, print_freq=args.print_freq, scaler=scaler)
 
-        confmat = evaluate(model, val_data_loader, device=device, num_classes=num_classes, scaler=scaler)
-        acc_global, acc, iu = confmat.compute()
-        val_info = str(confmat)
-        print(val_info)
+        loss_val, acc_val  = evaluate(model, val_data_loader, device=device, num_classes=num_classes, scaler=scaler)
 
         # 只在主进程上进行写操作
         if args.rank in [-1, 0]:
             if tb_writer:
-                tags = ['global_correct', 
-                        'average_class_correct/road', 'average_class_correct/sidewalk', 'average_class_correct/building', 
-                        'average_class_correct/wall', 'average_class_correct/fence', 'average_class_correct/pole', 
-                        'average_class_correct/traffic light', 'average_class_correct/traffic sign', 'average_class_correct/vegetation', 
-                        'average_class_correct/terrain', 'average_class_correct/sky', 'average_class_correct/person',
-                        'average_class_correct/rider', 'average_class_correct/car', 'average_class_correct/truck',
-                        'average_class_correct/bus', 'average_class_correct/train', 'average_class_correct/motorcycle',
-                        'average_class_correct/bicycle', 'average_class_correct/background',
+                # tags = ['global_correct', 
+                #         'average_class_correct/road', 'average_class_correct/sidewalk', 'average_class_correct/building', 
+                #         'average_class_correct/wall', 'average_class_correct/fence', 'average_class_correct/pole', 
+                #         'average_class_correct/traffic light', 'average_class_correct/traffic sign', 'average_class_correct/vegetation', 
+                #         'average_class_correct/terrain', 'average_class_correct/sky', 'average_class_correct/person',
+                #         'average_class_correct/rider', 'average_class_correct/car', 'average_class_correct/truck',
+                #         'average_class_correct/bus', 'average_class_correct/train', 'average_class_correct/motorcycle',
+                #         'average_class_correct/bicycle', 'average_class_correct/background',
                         
-                        'IoU/road', 'IoU/sidewalk', 'IoU/building', 
-                        'IoU/wall', 'IoU/fence', 'IoU/pole', 
-                        'IoU/traffic light', 'IoU/traffic sign', 'IoU/vegetation', 
-                        'IoU/terrain', 'IoU/sky', 'IoU/person',
-                        'IoU/rider', 'IoU/car', 'IoU/truck',
-                        'IoU/bus', 'IoU/train', 'IoU/motorcycle',
-                        'IoU/bicycle', 'IoU/background',
-                        'mean_IoU']
-                values = [acc_global.item() * 100] + [i for i in (acc * 100).tolist()] + \
-                         [i for i in (iu * 100).tolist()] + [iu.mean().item() * 100]
+                #         'IoU/road', 'IoU/sidewalk', 'IoU/building', 
+                #         'IoU/wall', 'IoU/fence', 'IoU/pole', 
+                #         'IoU/traffic light', 'IoU/traffic sign', 'IoU/vegetation', 
+                #         'IoU/terrain', 'IoU/sky', 'IoU/person',
+                #         'IoU/rider', 'IoU/car', 'IoU/truck',
+                #         'IoU/bus', 'IoU/train', 'IoU/motorcycle',
+                #         'IoU/bicycle', 'IoU/background',
+                #         'mean_IoU']
+                tags = ['train_loss', 'train_acc', 'val_loss', 'val_acc']
+                values = [mean_loss, mean_acc, loss_val, acc_val]
                 for x, tag in zip(values, tags):
                     tb_writer.add_scalar(tag, x, epoch)
                     
@@ -144,7 +141,7 @@ def main(args):
                 train_info = f"[epoch: {epoch}]\n" \
                              f"train_loss: {mean_loss:.4f}\n" \
                              f"lr: {lr:.6f}\n"
-                f.write(train_info + val_info + "\n\n")
+                f.write(train_info + "\n\n")
 
         if args.output_dir:
             # 只在主节点上执行保存权重操作

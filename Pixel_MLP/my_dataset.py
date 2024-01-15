@@ -175,6 +175,9 @@ class HSI_Transformer(data.Dataset):
             if self.img_type != "rgb" else Image.open(self.img_files[index])
         img = img[pixel_index, :]
         img = img[: img.shape[0] // self.sequence_length * self.sequence_length, :]
+        # check if img is empty
+        if img.shape[0] == 0:
+            return self.__getitem__(np.random.randint(0, len(self.img_files)))
         # img = np.ascontiguousarray(img.transpose(2, 0, 1))
         # img = (img - np.min(img)) * 255 / np.max(img)
         # img = Image.fromarray(img)
