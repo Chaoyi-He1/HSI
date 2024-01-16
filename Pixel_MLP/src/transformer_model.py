@@ -22,7 +22,7 @@ class Transformer_Encoder_cls(nn.Module):
             nn.Linear(2 * d_model, num_cls)
         )
         
-        self.pos_embed = PositionEmbeddingSine(d_model)
+        self.pos_embed = PositionEmbeddingSine(d_model) if d_model % 2 == 0 else PositionEmbeddingLearned(d_model)
     
     def forward(self, src: Tensor, src_mask: Tensor = None) -> Tensor:
         # src: (B, N, C)
@@ -34,7 +34,7 @@ class Transformer_Encoder_cls(nn.Module):
 
 
 def build_Transformer_Encoder(num_layers=4, norm=None, d_model=3, 
-                              nhead=2, dim_feedforward=512, dropout=0.1,
+                              nhead=1, dim_feedforward=512, dropout=0.1,
                               drop_path=0.4, activation="relu", 
                               normalize_before=True, num_cls=18):
     

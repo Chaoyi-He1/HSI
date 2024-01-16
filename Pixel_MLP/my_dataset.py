@@ -172,7 +172,7 @@ class HSI_Transformer(data.Dataset):
         pixel_index = np.array(pixel_index) == label_index
         
         img = sio.loadmat(self.img_files[index])["filtered_img"].astype(np.float16) \
-            if self.img_type != "rgb" else Image.open(self.img_files[index])
+            if self.img_type != "rgb" else np.array(Image.open(self.img_files[index])).astype(np.float16)
         img = img[pixel_index, :]
         img = img[: img.shape[0] // self.sequence_length * self.sequence_length, :]
         # check if img is empty

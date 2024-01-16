@@ -54,7 +54,7 @@ class PositionEmbeddingLearned(nn.Module):
 
     def reset_parameters(self):
         nn.init.uniform_(self.embed.weight)
-        nn.init.uniform_(self.col_embed.weight)
+        # nn.init.uniform_(self.col_embed.weight)
 
     def forward(self, x):
         l, dim = x.shape[-2:]
