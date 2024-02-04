@@ -170,7 +170,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--train_data_path', default='/data2/chaoyi/HSI_Dataset/V2/train/', help='dataset')
     parser.add_argument('--val_data_path', default='/data2/chaoyi/HSI_Dataset/V2/test/', help='dataset')
-    parser.add_argument('--label_type', default='Car_black_label', help='label type: gray or viz')    # Car_white_label, Car_black_label
+    parser.add_argument('--label_type', default='Treelabel', help='label type: gray or viz')    # Car_white_label, Car_black_label
     parser.add_argument('--img_type', default='OSP', help='image type: OSP or PCA or rgb')
     parser.add_argument('--name', default='', help='renames results.txt to results_name.txt if supplied')
 

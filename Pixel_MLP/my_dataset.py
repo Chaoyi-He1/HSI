@@ -138,7 +138,7 @@ class HSI_Transformer(data.Dataset):
             "pole": 5,
             "traffic light": 6,
             "traffic sign": 7,
-            "vegetation": 8,
+            "tree": 8,
             "terrain": 9,
             "sky": 10,
             "person": 11,
@@ -200,5 +200,120 @@ class HSI_Transformer(data.Dataset):
         images, targets = list(zip(*batch))
         batched_imgs = torch.stack(images, dim=0).flatten(0, 1)
         batched_targets = torch.stack(targets, dim=0).flatten(0, 1)
+        return batched_imgs, batched_targets
+
+
+class HSI_Transformer_all(data.Dataset):
+    def __init__(self, data_path: str = "", label_type: str = "gray", img_type: str = "OSP", 
+                 sequence_length: int = 10):
+        """
+        Parameters:
+            data_path: the path of the "HSI Dataset folder"
+            label_type: can be either "gray" or "viz"
+            img_type: can be either "OSP" or "PCA"
+            transforms: augmentation methods for images.
+        """
+        super(HSI_Transformer_all, self).__init__()
+        assert os.path.isdir(data_path), "path '{}' does not exist.".format(data_path)
+        self.img_folder_list = os.listdir(data_path)
+        self.img_type = img_type
+        self.label_type = label_type
+        self.sequence_length = sequence_length
+
+        if img_type != 'rgb':
+            self.img_files = [os.path.join(data_path, img_folder, file)
+                              for img_folder in self.img_folder_list
+                              for file in os.listdir(os.path.join(data_path, img_folder))
+                              if os.path.splitext(file)[-1].lower() == ".mat" and img_type in file]
+        else:
+            self.img_files = [os.path.join(data_path, img_folder, file)
+                              for img_folder in self.img_folder_list
+                              for file in os.listdir(os.path.join(data_path, img_folder))
+                              if os.path.splitext(file)[-1].lower() == ".jpg" and img_type in file]
+            
+        self.img_files.sort()
+        rgb = "rgb" if img_type == 'rgb' else ''
+        self.mask_files = [img.replace(img.split(os.sep)[-1],
+                                       os.path.splitext(
+                                           os.path.basename(img))[0].replace("_OSP10channel", "").replace(rgb, "")
+                                       + "_" + label_type + '.mat') for img in self.img_files]
+        rgb = "rgb" if img_type != 'rgb' else ''
+        self.label_mask = [img.replace(img.split(os.sep)[-1], rgb
+                                       + os.path.splitext(os.path.basename(img))[0].replace("_OSP10channel", "")
+                                       + "_gray.png") for img in self.img_files]
+        # self.mask_files = [img.replace(img.split(os.sep)[-1], "label_" + label_type
+        #                                + ".png") for img in self.img_files]
+        self.sanity_check()
+        self.label_mapping = {
+            "road": 0,
+            "sidewalk": 1,
+            "building": 2,
+            "wall": 3,
+            "fence": 4,
+            "pole": 5,
+            "traffic light": 6,
+            "traffic sign": 7,
+            "vegetation": 8,
+            "terrain": 9,
+            "sky": 10,
+            "person": 11,
+            "rider": 12,
+            "car": 13,
+            "truck": 14,
+            "bus": 15,
+            "train": 16,
+            "motorcycle": 17,
+            "bicycle": 18,
+            "background": 19,
+        }
+        self.endmember_label = {
+            "Roadlabel": 0,
+            "Building_Concrete_label": 1,
+            "Building_Glass_label": 2,
+            "Car_white_label": 3,
+            "Treelabel": 4,
+        }
+    
+    def sanity_check(self):
+        # if the mask file is not exist, then remove the corresponding image file and label file and mask file from the list
+        for i in range(len(self.img_files) - 1, -1, -1):
+            if not os.path.isfile(self.mask_files[i]):
+                del self.img_files[i]
+                del self.mask_files[i]
+                del self.label_mask[i]
+    
+    def creat_endmember_label(self, index, img):
+        img_h, img_w = img.shape
+        endmember_label = np.zeros((img_h, img_w), dtype=np.uint8) + len(self.endmember_label)
+        for i, k in enumerate(self.endmember_label.keys()):
+            endmember_label += sio.loadmat(self.mask_files[index])[k].astype(np.uint8) * self.endmember_label[k]
+        return endmember_label
+
+    def __getitem__(self, index):
+        """
+        Args:
+            index (int): Index
+        Returns:
+            tuple: (image, target) where target is the image segmentation.
+        """
+        
+        img = sio.loadmat(self.img_files[index])["filtered_img"].astype(np.float16) \
+            if self.img_type != "rgb" else np.array(Image.open(self.img_files[index])).astype(np.float16)
+
+        endmember_label = self.creat_endmember_label(index, img)
+           
+        img = torch.from_numpy(img)
+        target = torch.from_numpy(endmember_label)
+        
+        return img, target
+
+    def __len__(self):
+        return len(self.img_files)
+
+    @staticmethod
+    def collate_fn(batch):
+        images, targets = list(zip(*batch))
+        batched_imgs = torch.stack(images, dim=0)
+        batched_targets = torch.stack(targets, dim=0)
         return batched_imgs, batched_targets
     
