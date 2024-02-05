@@ -305,7 +305,7 @@ class HSI_Transformer_all(data.Dataset):
         endmember_label = np.zeros((img_h, img_w), dtype=np.uint8) + len(self.endmember_label)
         for i, k in enumerate(self.endmember_label.keys()):
             if os.path.isfile(self.mask_files[index][i]):
-                endmember_label[sio.loadmat(self.mask_files[index][i])["overlay"].astype(np.uint8)] = self.endmember_label[k]
+                endmember_label[sio.loadmat(self.mask_files[index][i])["overlay"].astype(bool)] = self.endmember_label[k]
         
         img_labels = np.array(Image.open(self.label_mask[index]))
         pixel_index = np.zeros((img_h, img_w), dtype=bool)
@@ -327,6 +327,9 @@ class HSI_Transformer_all(data.Dataset):
             if self.img_type != "rgb" else np.array(Image.open(self.img_files[index])).astype(np.float16)
 
         endmember_label, pixel_index = self.creat_endmember_label(index, img)
+        # Check if endmember_label only contains "5", if so, raise an error
+        if np.unique(endmember_label).shape[0] == 1 and np.unique(endmember_label)[0] == len(self.endmember_label):
+            return self.__getitem__(np.random.randint(0, len(self.img_files)))
         
         img = img[pixel_index, :]
         if img.shape[0] == 0:
