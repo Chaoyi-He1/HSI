@@ -233,10 +233,26 @@ class HSI_Transformer_all(data.Dataset):
             
         self.img_files.sort()
         rgb = "rgb" if img_type == 'rgb' else ''
-        self.mask_files = [img.replace(img.split(os.sep)[-1],
+        self.mask_files = [[img.replace(img.split(os.sep)[-1],
                                        os.path.splitext(
                                            os.path.basename(img))[0].replace("_OSP10channel", "").replace(rgb, "")
-                                       + "_" + label_type + '.mat') for img in self.img_files]
+                                       + "_" + "Roadlabel" + '.mat'),
+                            img.replace(img.split(os.sep)[-1],
+                                       os.path.splitext(
+                                           os.path.basename(img))[0].replace("_OSP10channel", "").replace(rgb, "")
+                                       + "_" + "Building_Concrete_label" + '.mat'),
+                            img.replace(img.split(os.sep)[-1],
+                                       os.path.splitext(
+                                           os.path.basename(img))[0].replace("_OSP10channel", "").replace(rgb, "")
+                                       + "_" + "Building_Glass_label" + '.mat'),
+                            img.replace(img.split(os.sep)[-1],
+                                       os.path.splitext(
+                                           os.path.basename(img))[0].replace("_OSP10channel", "").replace(rgb, "")
+                                       + "_" + "Car_white_label" + '.mat'),
+                            img.replace(img.split(os.sep)[-1],
+                                       os.path.splitext(
+                                           os.path.basename(img))[0].replace("_OSP10channel", "").replace(rgb, "")
+                                       + "_" + "Treelabel" + '.mat'),] for img in self.img_files]
         rgb = "rgb" if img_type != 'rgb' else ''
         self.label_mask = [img.replace(img.split(os.sep)[-1], rgb
                                        + os.path.splitext(os.path.basename(img))[0].replace("_OSP10channel", "")
@@ -277,17 +293,27 @@ class HSI_Transformer_all(data.Dataset):
     def sanity_check(self):
         # if the mask file is not exist, then remove the corresponding image file and label file and mask file from the list
         for i in range(len(self.img_files) - 1, -1, -1):
-            if not os.path.isfile(self.mask_files[i]):
+            if not os.path.isfile(self.mask_files[i][0]) or not os.path.isfile(self.mask_files[i][1]) \
+               or not os.path.isfile(self.mask_files[i][2]) or not os.path.isfile(self.mask_files[i][3]) \
+               or not os.path.isfile(self.mask_files[i][4]):
                 del self.img_files[i]
                 del self.mask_files[i]
                 del self.label_mask[i]
     
     def creat_endmember_label(self, index, img):
-        img_h, img_w = img.shape
+        img_h, img_w = img.shape[:2]
         endmember_label = np.zeros((img_h, img_w), dtype=np.uint8) + len(self.endmember_label)
         for i, k in enumerate(self.endmember_label.keys()):
-            endmember_label += sio.loadmat(self.mask_files[index])[k].astype(np.uint8) * self.endmember_label[k]
-        return endmember_label
+            if os.path.isfile(self.mask_files[index][i]):
+                endmember_label[sio.loadmat(self.mask_files[index][i])["overlay"].astype(np.uint8)] = self.endmember_label[k]
+        
+        img_labels = np.array(Image.open(self.label_mask[index]))
+        pixel_index = np.zeros((img_h, img_w), dtype=bool)
+        for i, k in enumerate(self.label_mapping.keys()):
+            if any(k.lower() in key.lower() for key in self.endmember_label.keys()):
+                pixel_index = np.logical_or(pixel_index, img_labels == self.label_mapping[k])
+        
+        return endmember_label, pixel_index
 
     def __getitem__(self, index):
         """
@@ -300,10 +326,17 @@ class HSI_Transformer_all(data.Dataset):
         img = sio.loadmat(self.img_files[index])["filtered_img"].astype(np.float16) \
             if self.img_type != "rgb" else np.array(Image.open(self.img_files[index])).astype(np.float16)
 
-        endmember_label = self.creat_endmember_label(index, img)
+        endmember_label, pixel_index = self.creat_endmember_label(index, img)
+        
+        img = img[pixel_index, :]
+        if img.shape[0] == 0:
+            return self.__getitem__(np.random.randint(0, len(self.img_files)))
+        img = img[: img.shape[0] // self.sequence_length * self.sequence_length, :]
+        endmember_label = endmember_label[pixel_index]
+        endmember_label = endmember_label[: endmember_label.shape[0] // self.sequence_length * self.sequence_length]
            
-        img = torch.from_numpy(img)
-        target = torch.from_numpy(endmember_label)
+        img = torch.from_numpy(img).view(-1, self.sequence_length, img.shape[1]).contiguous()
+        target = torch.from_numpy(endmember_label).view(-1, self.sequence_length).contiguous()
         
         return img, target
 
@@ -313,7 +346,7 @@ class HSI_Transformer_all(data.Dataset):
     @staticmethod
     def collate_fn(batch):
         images, targets = list(zip(*batch))
-        batched_imgs = torch.stack(images, dim=0)
-        batched_targets = torch.stack(targets, dim=0)
+        batched_imgs = torch.stack(images, dim=0).flatten(0, 1)
+        batched_targets = torch.stack(targets, dim=0).flatten(0, 1).to(dtype=torch.long)
         return batched_imgs, batched_targets
     

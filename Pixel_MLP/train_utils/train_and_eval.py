@@ -5,8 +5,9 @@ import train_utils.distributed_utils as utils
 
 def criterion(inputs, target):
     losses = nn.functional.binary_cross_entropy_with_logits(inputs, target) if torch.max(target) <= 1 \
-        else nn.functional.cross_entropy(inputs, target.squeeze(1))
-    accuracy = torch.mean(((inputs > 0) == target.byte()).float())
+        else nn.functional.cross_entropy(inputs.transpose(1, 2), target.squeeze(-1))
+    accuracy = torch.mean(((inputs > 0) == target.byte()).float()) if torch.max(target) <= 1 \
+        else torch.mean((inputs.argmax(-1) == target.squeeze(-1)).float())
     return losses, accuracy
 
 
