@@ -6,7 +6,7 @@ import torch
 
 from src import get_model
 from train_utils import train_one_epoch, evaluate, create_lr_scheduler, init_distributed_mode, save_on_master, mkdir
-from my_dataset import HSI_Segmentation, HSI_Transformer
+from my_dataset import HSI_Segmentation, HSI_Transformer, HSI_Transformer_all
 import transforms as T
 from torch.utils.tensorboard import SummaryWriter
 
@@ -31,15 +31,15 @@ def main(args):
 
     print("Creating data loaders")
     # load train data set
-    train_dataset = HSI_Transformer(data_path=args.train_data_path,
-                                    label_type=args.label_type,
-                                    img_type=args.img_type,
-                                   )
+    train_dataset = HSI_Transformer_all(data_path=args.train_data_path,
+                                        label_type=args.label_type,
+                                        img_type=args.img_type,
+                                       )
     # load validation data set
-    val_dataset = HSI_Transformer(data_path=args.val_data_path,
-                                  label_type=args.label_type,
-                                  img_type=args.img_type,
-                                 )
+    val_dataset = HSI_Transformer_all(data_path=args.val_data_path,
+                                      label_type=args.label_type,
+                                      img_type=args.img_type,
+                                     )
     
     if args.distributed:
         train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
