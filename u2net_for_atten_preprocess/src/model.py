@@ -107,6 +107,12 @@ class RSU4F(nn.Module):
 class U2Net(nn.Module):
     def __init__(self, cfg: dict, out_ch: int = 1):
         super().__init__()
+        self.pre_process_conv = nn.Conv2d(in_channels=351,
+                                          out_channels=cfg["encode"][0][1],
+                                          kernel_size=3,
+                                          stride=1,
+                                          padding=1)
+        
         assert "encode" in cfg
         assert "decode" in cfg
         self.encode_num = len(cfg["encode"])
@@ -136,7 +142,7 @@ class U2Net(nn.Module):
 
     def forward(self, x: torch.Tensor) -> Union[torch.Tensor, List[torch.Tensor]]:
         _, _, h, w = x.shape
-
+        x = self.pre_process_conv(x)
         # collect encode outputs
         encode_outputs = []
         for i, m in enumerate(self.encode_modules):
