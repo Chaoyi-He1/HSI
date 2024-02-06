@@ -8,7 +8,7 @@
             "name": "Python: Current File",
             "type": "debugpy",
             "request": "launch",
-            "module": "/home/grads/c/chaoyi_he/Desktop/python3.8_env/bin/torchrun",
+            "program": "/home/grads/c/chaoyi_he/Desktop/python3.8_env/bin/torchrun",
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
