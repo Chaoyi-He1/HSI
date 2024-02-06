@@ -205,7 +205,7 @@ class HSI_Transformer(data.Dataset):
 
 class HSI_Transformer_all(data.Dataset):
     def __init__(self, data_path: str = "", label_type: str = "gray", img_type: str = "OSP", 
-                 sequence_length: int = 10):
+                 sequence_length: int = 100):
         """
         Parameters:
             data_path: the path of the "HSI Dataset folder"
