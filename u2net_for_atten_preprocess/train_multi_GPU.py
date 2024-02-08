@@ -8,11 +8,39 @@ from src import u2net_full, u2net_lite
 from train_eval_util import train_one_epoch, evaluate, create_lr_scheduler, init_distributed_mode, save_on_master, mkdir
 from my_dataset import HSI_Segmentation, HSI_Transformer, HSI_Transformer_all
 from torch.utils.tensorboard import SummaryWriter
+import transforms as T
+import numpy as np
+import pandas as pd
 
 
 def create_model(in_chans, num_classes):
     model = u2net_lite(in_ch=in_chans, out_ch=num_classes)
     return model
+
+
+def save_conv_weights(model, save_path):
+    conv_layer = model.pre_process_conv.weight.data
+    if not os.path.exists(save_path):
+            os.makedirs(save_path)
+    for out_ch in range(conv_layer.shape[0]):
+        save_mtx = conv_layer[out_ch, :, :, :].cpu().numpy()
+        save_mtx = np.reshape(save_mtx, (save_mtx.shape[0] * save_mtx.shape[1], save_mtx.shape[2]))
+        file_name = os.path.join(save_path, 'conv_{}.csv'.format(out_ch))
+        if os.path.exists(file_name):
+            os.remove(file_name)
+        pd.DataFrame(save_mtx).to_csv(file_name, index=False, header=False)
+
+
+class SegmentationCrop:
+    def __init__(self, crop_size):
+        self.crop_size = crop_size
+        self.transforms = T.Compose([
+            T.ToTensor(),
+            T.RandomCrop(self.crop_size),
+        ])
+    
+    def __call__(self, image, target):
+        return self.transforms(image, target)
 
 
 def main(args):
@@ -33,11 +61,13 @@ def main(args):
     train_dataset = HSI_Transformer_all(data_path=args.train_data_path,
                                         label_type=args.label_type,
                                         img_type=args.img_type,
+                                        transform=SegmentationCrop(1400),
                                        )
     # load validation data set
     val_dataset = HSI_Transformer_all(data_path=args.val_data_path,
                                       label_type=args.label_type,
                                       img_type=args.img_type,
+                                      transform=SegmentationCrop(1400),
                                      )
     
     if args.distributed:

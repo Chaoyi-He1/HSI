@@ -205,7 +205,7 @@ class HSI_Transformer(data.Dataset):
 
 class HSI_Transformer_all(data.Dataset):
     def __init__(self, data_path: str = "", label_type: str = "gray", img_type: str = "OSP", 
-                 sequence_length: int = 50):
+                 transform=None):
         """
         Parameters:
             data_path: the path of the "HSI Dataset folder"
@@ -218,7 +218,7 @@ class HSI_Transformer_all(data.Dataset):
         self.img_folder_list = os.listdir(data_path)
         self.img_type = img_type
         self.label_type = label_type
-        self.sequence_length = sequence_length
+        self.transforms = transform
 
         if img_type != 'rgb':
             self.img_files = [os.path.join(data_path, img_folder, file)
@@ -325,8 +325,10 @@ class HSI_Transformer_all(data.Dataset):
         if np.unique(endmember_label).shape[0] == 1 and np.unique(endmember_label)[0] == len(self.endmember_label):
             return self.__getitem__(np.random.randint(0, len(self.img_files)))
            
-        img = torch.from_numpy(img)
-        target = torch.from_numpy(endmember_label)
+        # img = torch.from_numpy(img)
+        # target = torch.from_numpy(endmember_label)
+        if self.transforms is not None:
+            img, target = self.transforms(img, endmember_label)
         
         return img, target
 
