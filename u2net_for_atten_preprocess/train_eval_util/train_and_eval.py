@@ -7,7 +7,8 @@ from typing import Iterable
 
 
 def custom_loss(output, target, model, lambda1, lambda2):
-    basic_loss = F.cross_entropy(output, target)
+    basic_loss = [F.cross_entropy(output[i], target) for i in range(len(output))]
+    basic_loss_sum = sum(basic_loss)
     
     # L1 regularization term to encourage sparsity
     l1_regularization = lambda1 * torch.norm(model.pre_process_conv.weight, p=1)
@@ -16,9 +17,9 @@ def custom_loss(output, target, model, lambda1, lambda2):
     penalty = lambda2 * torch.mean(torch.abs(torch.abs(model.pre_process_conv.weight - 0.5) - 0.5))
     
     # Calculate the accuracy of each pixel
-    accuracy = (output.argmax(1) == target).float().mean()
+    accuracy = (output[0].argmax(1) == target).float().mean()
     
-    return basic_loss + l1_regularization + penalty, accuracy
+    return basic_loss_sum + l1_regularization + penalty, accuracy
 
 
 def train_one_epoch(model: nn.Module,
