@@ -195,6 +195,7 @@ def main(args):
     total_time = time.time() - start_time
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print('Training time {}'.format(total_time_str))
+    save_conv_weights(model_without_ddp, os.path.join(args.output_dir, 'conv_weights'))
 
 
 if __name__ == "__main__":
@@ -240,7 +241,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--print-freq', default=20, type=int, help='print frequency')
 
-    parser.add_argument('--output-dir', default='./Pixel_MLP/multi_train/OSP/', help='path where to save')
+    parser.add_argument('--output-dir', default='./u2net_for_atten_preprocess/multi_train/OSP/', help='path where to save')
 
     parser.add_argument('--resume', default='./Pixel_MLP/multi_train/OSP/model_030', help='resume from checkpoint')
 

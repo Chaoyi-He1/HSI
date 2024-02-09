@@ -14,7 +14,7 @@ def custom_loss(output, target, model, lambda1, lambda2):
     l1_regularization = lambda1 * torch.norm(model.module.pre_process_conv.weight, p=1)
     
     # Custom penalty term to encourage weights to be close to 0 or 1
-    penalty = lambda2 * torch.mean(torch.abs(torch.abs(model.pre_process_conv.weight - 0.5) - 0.5))
+    penalty = lambda2 * torch.mean(torch.abs(torch.abs(model.module.pre_process_conv.weight - 0.5) - 0.5))
     
     # Calculate the accuracy of each pixel
     accuracy = (output[0].argmax(1) == target).float().mean()
@@ -57,7 +57,7 @@ def train_one_epoch(model: nn.Module,
         lr_scheduler.step()
         
         metric_logger.update(loss=loss.item())
-        metric_logger.update(acc=accuracy(output, target))
+        metric_logger.update(acc=accuracy.item())
         metric_logger.update(lr=optimizer.param_groups[0]["lr"])
     
     metric_logger.synchronize_between_processes()
@@ -84,7 +84,7 @@ def evaluate(model: nn.Module,
             basic_loss = F.cross_entropy(output, targets)
 
             metric_logger.update(loss=basic_loss.item())
-            metric_logger.update(acc=accuracy)
+            metric_logger.update(acc=accuracy.item())
             confmat.update(targets.flatten(), output.argmax(1).flatten())
         
         metric_logger.synchronize_between_processes()
