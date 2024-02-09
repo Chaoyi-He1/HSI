@@ -107,7 +107,7 @@ class RSU4F(nn.Module):
 class U2Net(nn.Module):
     def __init__(self, cfg: dict, out_ch: int = 1):
         super().__init__()
-        self.pre_process_conv = nn.Conv2d(in_channels=351,
+        self.pre_process_conv = nn.Conv2d(in_channels=71,
                                           out_channels=cfg["encode"][0][1],
                                           kernel_size=3,
                                           stride=1,
