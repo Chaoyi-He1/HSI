@@ -7,11 +7,11 @@ from typing import Iterable
 
 
 def custom_loss(output, target, model, lambda1, lambda2):
-    basic_loss = [F.cross_entropy(output[i], target) for i in range(len(output))]
+    basic_loss = [F.cross_entropy(output[i], target.squeeze(1)) for i in range(len(output))]
     basic_loss_sum = sum(basic_loss)
     
     # L1 regularization term to encourage sparsity
-    l1_regularization = lambda1 * torch.norm(model.pre_process_conv.weight, p=1)
+    l1_regularization = lambda1 * torch.norm(model.module.pre_process_conv.weight, p=1)
     
     # Custom penalty term to encourage weights to be close to 0 or 1
     penalty = lambda2 * torch.mean(torch.abs(torch.abs(model.pre_process_conv.weight - 0.5) - 0.5))
