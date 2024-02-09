@@ -84,7 +84,7 @@ def evaluate(model: nn.Module,
             images, targets = images.to(device), targets.to(device)
             output = model(images)
             
-            _, accuracy = custom_loss(output, targets, model, 0.1, 0.1)
+            _, accuracy = custom_loss(output, targets, model, 0.1, 0.1, False)
             basic_loss = F.cross_entropy(output, targets)
 
             metric_logger.update(loss=basic_loss.item())
