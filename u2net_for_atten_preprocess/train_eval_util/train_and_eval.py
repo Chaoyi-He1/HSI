@@ -21,7 +21,8 @@ def custom_loss(output, target, model, lambda1, lambda2, is_train=True):
     penalty = lambda2 * torch.mean(torch.abs(torch.abs(model.module.pre_process_conv.weight - 0.5) - 0.5))
     
     # Calculate the accuracy of each pixel
-    accuracy = (output[0].argmax(1) == target).float().mean()
+    accuracy = (output[0].argmax(1) == target.squeeze(1)).float().mean() if is_train \
+        else (output.argmax(1) == target.squeeze(1)).float().mean()
     
     return basic_loss_sum + l1_regularization + penalty, accuracy
 
@@ -85,7 +86,7 @@ def evaluate(model: nn.Module,
             output = model(images)
             
             _, accuracy = custom_loss(output, targets, model, 0.1, 0.1, False)
-            basic_loss = F.cross_entropy(output, targets)
+            basic_loss = F.cross_entropy(output, targets.squeeze(1))
 
             metric_logger.update(loss=basic_loss.item())
             metric_logger.update(acc=accuracy.item())
