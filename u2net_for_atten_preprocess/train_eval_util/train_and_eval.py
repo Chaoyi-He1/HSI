@@ -14,8 +14,12 @@ def custom_loss(output, target, model, lambda1, lambda2, is_train=True):
         basic_loss = F.cross_entropy(output, target.squeeze(1))
         basic_loss_sum = basic_loss 
     
-    # L1 regularization term to encourage sparsity
-    l1_regularization = lambda1 * torch.norm(model.module.pre_process_conv.weight, p=1)
+    # L1 regularization term to encourage sparsity 
+    # and subtract the max value among the in_channels to make sure the rest of the values among the in_channels stay at 0
+    l1_regularization = torch.sum(torch.abs(model.module.pre_process_conv.weight))
+    max_value = torch.sum(torch.max(torch.abs(model.module.pre_process_conv.weight), dim=1)[0])
+    l1_regularization -= max_value
+    l1_regularization *= lambda1 / model.module.pre_process_conv.weight.numel()
     
     # Custom penalty term to encourage weights to be close to 0 or 1
     penalty = lambda2 * torch.mean(torch.abs(torch.abs(model.module.pre_process_conv.weight - 0.5) - 0.5))
@@ -81,7 +85,7 @@ def evaluate(model: nn.Module,
     metric_logger.add_meter('acc', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
     header = 'Test:'
     with torch.no_grad(), torch.cuda.amp.autocast(enabled=scaler is not None):
-        for images, targets in metric_logger.log_every(data_loader, 100, header):
+        for images, targets in metric_logger.log_every(data_loader, 10, header):
             images, targets = images.to(device), targets.to(device)
             output = model(images)
             
