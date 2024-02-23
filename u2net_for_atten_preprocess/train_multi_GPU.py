@@ -213,7 +213,7 @@ if __name__ == "__main__":
     parser.add_argument('--device', default='cuda', help='device')
 
     parser.add_argument('--num-classes', default=6, type=int, help='num_classes')
-    parser.add_argument('--lambda1', default=0.5, type=float, help='lambda1')
+    parser.add_argument('--lambda1', default=0.8, type=float, help='lambda1')
     parser.add_argument('--lambda2', default=0.6, type=float, help='lambda2')
 
     parser.add_argument('-b', '--batch-size', default=1, type=int,
