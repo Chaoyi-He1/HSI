@@ -17,12 +17,18 @@ def custom_loss(output, target, model, lambda1, lambda2, is_train=True):
     # L1 regularization term to encourage sparsity 
     # and subtract the max value among the in_channels to make sure the rest of the values among the in_channels stay at 0
     l1_regularization = torch.sum(torch.abs(model.module.pre_process_conv.weight)) * 2
+    # get the max value position of each in_channels, keep the same 4D shape as model.module.pre_process_conv.weight
+    max_value_index = torch.max(torch.abs(model.module.pre_process_conv.weight), dim=1, keepdim=True)[1]
+    # get a boolean tensor shape same as model.module.pre_process_conv.weight, where the max value position is 0, otherwise 1
+    non_max_value_index = torch.ones_like(model.module.pre_process_conv.weight, dtype=torch.bool, device=model.module.pre_process_conv.weight.device)
+    non_max_value_index.scatter_(1, max_value_index, 0)
     max_value = torch.sum(torch.max(torch.abs(model.module.pre_process_conv.weight), dim=1)[0])
     l1_regularization -= max_value
     l1_regularization *= lambda1 / model.module.pre_process_conv.weight.numel()
     
-    # Custom penalty term to encourage weights to be close to 0 or 1
-    penalty = lambda2 * torch.mean(torch.abs(torch.abs(model.module.pre_process_conv.weight - 0.5) - 0.5))
+    # Custom penalty term to encourage weights to be close to 0 if is not the max value position, otherwise 1
+    penalty = lambda2 * (torch.mean(torch.abs(model.module.pre_process_conv.weight) * non_max_value_index) + 
+                         torch.mean(torch.abs(1 - model.module.pre_process_conv.weight) * (~non_max_value_index)))
     
     # Calculate the accuracy of each pixel
     accuracy = (output[0].argmax(1) == target.squeeze(1)).float().mean() if is_train \
@@ -62,8 +68,6 @@ def train_one_epoch(model: nn.Module,
             else:
                 loss.backward()
                 optimizer.step()
-        
-        lr_scheduler.step()
         
         metric_logger.update(loss=loss.item())
         metric_logger.update(acc=accuracy.item())

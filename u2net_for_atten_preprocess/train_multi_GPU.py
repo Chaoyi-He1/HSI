@@ -108,7 +108,7 @@ def main(args):
 
     scaler = torch.cuda.amp.GradScaler() if args.amp else None
 
-    lr_scheduler = create_lr_scheduler(optimizer, len(train_data_loader), args.epochs, warmup=False)
+    lr_scheduler = create_lr_scheduler(optimizer, 1, args.epochs, warmup=False)
 
     # 如果传入resume参数，即上次训练的权重地址，则接着上次的参数训练
     if args.resume.endswith(".pth"):
@@ -137,7 +137,7 @@ def main(args):
         mean_loss, mean_acc, lr = train_one_epoch(model, optimizer, train_data_loader, device, epoch,
                                         lr_scheduler=lr_scheduler, print_freq=args.print_freq, scaler=scaler,
                                         lambda1=args.lambda1, lambda2=args.lambda2)
-
+        lr_scheduler.step()
         loss_val, acc_val, confmat  = evaluate(model, val_data_loader, device=device, num_classes=num_classes, scaler=scaler)
         acc_global, acc, iu = confmat.compute()
         val_info = str(confmat)
