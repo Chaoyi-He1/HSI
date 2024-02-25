@@ -16,7 +16,7 @@ def custom_loss(output, target, model, lambda1, lambda2, is_train=True):
     
     # L1 regularization term to encourage sparsity 
     # and subtract the max value among the in_channels to make sure the rest of the values among the in_channels stay at 0
-    l1_regularization = torch.sum(torch.abs(model.module.pre_process_conv.weight))
+    l1_regularization = torch.sum(torch.abs(model.module.pre_process_conv.weight)) * 2
     max_value = torch.sum(torch.max(torch.abs(model.module.pre_process_conv.weight), dim=1)[0])
     l1_regularization -= max_value
     l1_regularization *= lambda1 / model.module.pre_process_conv.weight.numel()
