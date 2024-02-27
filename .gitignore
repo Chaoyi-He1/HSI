@@ -15,4 +15,4 @@ SVR_weights/
 /Support_Vector_Regression/__pycache__/
 *.txt
 *.pyc
-output.log
+*.log
