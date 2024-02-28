@@ -16,7 +16,7 @@ def custom_loss(output, target, model, lambda1, lambda2, is_train=True):
     
     # L1 regularization term to encourage sparsity 
     # and subtract the max value among the in_channels to make sure the rest of the values among the in_channels stay at 0
-    l1_regularization = torch.sum(torch.abs(model.module.pre_process_conv.weight)) * 2
+    l1_regularization = torch.sum(torch.abs(model.module.pre_process_conv.weight))
     # get the max value position of each in_channels, keep the same 4D shape as model.module.pre_process_conv.weight
     max_value_index = torch.max(torch.abs(model.module.pre_process_conv.weight), dim=1, keepdim=True)[1]
     # get a boolean tensor shape same as model.module.pre_process_conv.weight, where the max value position is 0, otherwise 1
