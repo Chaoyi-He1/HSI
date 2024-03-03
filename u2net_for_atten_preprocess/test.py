@@ -95,7 +95,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--output-dir', default='./u2net_for_atten_preprocess/multi_train/OSP/', help='path where to save')
 
-    parser.add_argument('--resume', default='./u2net_for_atten_preprocess/multi_train/OSP/model_073.pth', help='resume from checkpoint')
+    parser.add_argument('--resume', default='./u2net_for_atten_preprocess/multi_train/OSP/model_099.pth', help='resume from checkpoint')
 
     parser.add_argument(
         "--test-only",

@@ -31,6 +31,23 @@ def save_conv_weights(model, save_path):
         pd.DataFrame(save_mtx).to_csv(file_name, index=False, header=False)
 
 
+def load_conv_weights(model: torch.nn.Module, load_path):
+    # load all 'conv_index_i.csv' files in load_path
+    file_list = os.listdir(load_path)
+    file_list = [file for file in file_list if file.endswith('.csv') and file.startswith('conv_index_')]
+    
+    # Manually set the weights, each file is a 3x3 index for the channel of each 3x3 elements to be set to 1, others are 0
+    with torch.no_grad():
+        model.pre_process_conv.weight.fill_(0)
+        for i, file in enumerate(file_list):
+            file_path = os.path.join(load_path, file)
+            conv_index = pd.read_csv(file_path, header=None).values
+            conv_index = np.reshape(conv_index, (3, 3))
+            for idx, val in np.ndenumerate(conv_index):
+                model.pre_process_conv.weight[i, val, idx[0], idx[1]] = 1
+    model.pre_process_conv.weight.requires_grad = False
+
+
 class SegmentationCrop:
     def __init__(self, crop_size):
         self.crop_size = crop_size
@@ -91,6 +108,7 @@ def main(args):
     # create model num_classes equal background + 20 classes
     model = create_model(in_chans=10, num_classes=num_classes)
     model.to(device)
+    load_conv_weights(model, os.path.join(args.output_dir, 'conv_weights'))
 
     if args.sync_bn:
         model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
