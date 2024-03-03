@@ -16,3 +16,4 @@ SVR_weights/
 *.txt
 *.pyc
 *.log
+output.log
