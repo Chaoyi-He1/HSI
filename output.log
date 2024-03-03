@@ -11,3 +11,10 @@ Creating data loaders
 Creating model
 Start training
 Epoch: [0]  [  0/304]  eta: 1:14:00  lr: 0.000100  loss: 13.458366  acc: 0.205709  time: 14.6080  data: 12.5868  max mem: 6600
+Epoch: [0]  [ 20/304]  eta: 0:14:17  lr: 0.000100  loss: 10.299608  acc: 0.613032  time: 2.4410  data: 1.6211  max mem: 6610
+Epoch: [0]  [ 40/304]  eta: 0:10:56  lr: 0.000100  loss: 6.781187  acc: 0.482007  time: 1.9233  data: 0.2807  max mem: 6610
+Epoch: [0]  [ 60/304]  eta: 0:09:54  lr: 0.000100  loss: 7.836503  acc: 0.590007  time: 2.3399  data: 0.3207  max mem: 6610
+Epoch: [0]  [ 80/304]  eta: 0:09:40  lr: 0.000100  loss: 9.412674  acc: 0.506775  time: 3.0600  data: 0.0683  max mem: 6610
+Epoch: [0]  [100/304]  eta: 0:08:31  lr: 0.000100  loss: 6.856860  acc: 0.529304  time: 2.1665  data: 0.2301  max mem: 6610
+Epoch: [0]  [120/304]  eta: 0:07:43  lr: 0.000100  loss: 9.202247  acc: 0.370116  time: 2.5673  data: 0.4934  max mem: 6610
+Epoch: [0]  [140/304]  eta: 0:06:45  lr: 0.000100  loss: 7.324666  acc: 0.566271  time: 2.1853  data: 0.8269  max mem: 6610
