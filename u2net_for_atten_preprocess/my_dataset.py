@@ -235,27 +235,27 @@ class HSI_Transformer_all(data.Dataset):
         rgb = "rgb" if img_type == 'rgb' else ''
         self.mask_files = [[img.replace(img.split(os.sep)[-1],
                                        os.path.splitext(
-                                           os.path.basename(img))[0].replace("_ALL71channel", "").replace(rgb, "")
+                                           os.path.basename(img))[0].replace("_OSP10channel", "").replace(rgb, "")
                                        + "_" + "Roadlabel" + '.mat'),
                             img.replace(img.split(os.sep)[-1],
                                        os.path.splitext(
-                                           os.path.basename(img))[0].replace("_ALL71channel", "").replace(rgb, "")
+                                           os.path.basename(img))[0].replace("_OSP10channel", "").replace(rgb, "")
                                        + "_" + "Building_Concrete_label" + '.mat'),
                             img.replace(img.split(os.sep)[-1],
                                        os.path.splitext(
-                                           os.path.basename(img))[0].replace("_ALL71channel", "").replace(rgb, "")
+                                           os.path.basename(img))[0].replace("_OSP10channel", "").replace(rgb, "")
                                        + "_" + "Building_Glass_label" + '.mat'),
                             img.replace(img.split(os.sep)[-1],
                                        os.path.splitext(
-                                           os.path.basename(img))[0].replace("_ALL71channel", "").replace(rgb, "")
+                                           os.path.basename(img))[0].replace("_OSP10channel", "").replace(rgb, "")
                                        + "_" + "Car_white_label" + '.mat'),
                             img.replace(img.split(os.sep)[-1],
                                        os.path.splitext(
-                                           os.path.basename(img))[0].replace("_ALL71channel", "").replace(rgb, "")
+                                           os.path.basename(img))[0].replace("_OSP10channel", "").replace(rgb, "")
                                        + "_" + "Treelabel" + '.mat'),] for img in self.img_files]
         rgb = "rgb" if img_type != 'rgb' else ''
         self.label_mask = [img.replace(img.split(os.sep)[-1], rgb
-                                       + os.path.splitext(os.path.basename(img))[0].replace("_ALL71channel", "")
+                                       + os.path.splitext(os.path.basename(img))[0].replace("_OSP10channel", "")
                                        + "_gray.png") for img in self.img_files]
         # self.mask_files = [img.replace(img.split(os.sep)[-1], "label_" + label_type
         #                                + ".png") for img in self.img_files]
