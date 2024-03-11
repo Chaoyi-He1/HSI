@@ -16,7 +16,7 @@
                 // "--use_env",
                 // "./Support_Vector_Regression/main.py",
                 "./u2net_for_atten_preprocess/train_multi_GPU.py",
-                "--img_type", "rgb",
+                "--img_type", "ALL",
             ]
         }
     ]

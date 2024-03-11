@@ -113,6 +113,7 @@ class U2Net(nn.Module):
         #                                   stride=1,
         #                                   padding=1)
         
+        self.pre_process_conv = nn.Parameter(torch.ones(1, 71, 1, 1))
         assert "encode" in cfg
         assert "decode" in cfg
         self.encode_num = len(cfg["encode"])
@@ -143,6 +144,7 @@ class U2Net(nn.Module):
     def forward(self, x: torch.Tensor) -> Union[torch.Tensor, List[torch.Tensor]]:
         _, _, h, w = x.shape
         # x = self.pre_process_conv(x)
+        x = x * self.pre_process_conv
         # collect encode outputs
         encode_outputs = []
         for i, m in enumerate(self.encode_modules):
