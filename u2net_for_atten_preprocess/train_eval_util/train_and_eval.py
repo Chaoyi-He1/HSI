@@ -25,8 +25,8 @@ def custom_loss(output, target, model, lambda1, lambda2, is_train=True):
         non_max_value_index = torch.ones_like(model.module.pre_process_conv, dtype=torch.bool, device=model.module.pre_process_conv.device)
         non_max_value_index.scatter_(1, max_value_index, 0)
         
-        max_value = torch.sum(torch.max(torch.abs(model.module.pre_process_conv), dim=1)[0])
-        l1_regularization -= max_value
+        # max_value = torch.sum(torch.max(torch.abs(model.module.pre_process_conv), dim=1)[0])
+        # l1_regularization -= max_value
         l1_regularization *= lambda1 / model.module.pre_process_conv.numel()
         
         # Custom penalty term to encourage weights to be close to 0 if is not the max value position, otherwise 1
