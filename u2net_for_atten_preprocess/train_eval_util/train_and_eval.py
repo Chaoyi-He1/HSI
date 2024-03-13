@@ -16,12 +16,9 @@ def custom_loss(output, target, model, lambda1, lambda2, is_train=True):
     
     pre_conv_trainable = model.module.pre_process_conv.requires_grad
     if pre_conv_trainable:
-        # Regularization params are "pre_process_conv" and "spacial_atten"
-        regular_params = [model.module.pre_process_conv, model.module.spacial_atten]
-        
         # L1 regularization term to encourage sparsity 
         # and subtract the max value among the in_channels to make sure the rest of the values among the in_channels stay at 0
-        l1_regularization = torch.sum(torch.abs(regular_params))
+        l1_regularization = torch.sum(torch.abs(model.module.pre_process_conv)) + torch.sum(torch.abs(model.module.spacial_atten))
         # max_value = torch.sum(torch.max(torch.abs(model.module.pre_process_conv), dim=1)[0])
         # l1_regularization -= max_value
         l1_regularization *= lambda1 / (model.module.pre_process_conv.numel() + model.module.spacial_atten.numel())
