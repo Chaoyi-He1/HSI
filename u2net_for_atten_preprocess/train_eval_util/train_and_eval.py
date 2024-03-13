@@ -16,18 +16,21 @@ def custom_loss(output, target, model, lambda1, lambda2, is_train=True):
     
     pre_conv_trainable = model.module.pre_process_conv.requires_grad
     if pre_conv_trainable:
+        # Regularization params are "pre_process_conv" and "spacial_atten"
+        regular_params = [model.module.pre_process_conv, model.module.spacial_atten]
+        
         # L1 regularization term to encourage sparsity 
         # and subtract the max value among the in_channels to make sure the rest of the values among the in_channels stay at 0
-        l1_regularization = torch.sum(torch.abs(model.module.pre_process_conv))
-        # get the max value position of each in_channels, keep the same 4D shape as model.module.pre_process_conv.weight
-        max_value_index = torch.max(torch.abs(model.module.pre_process_conv), dim=1, keepdim=True)[1]
-        # get a boolean tensor shape same as model.module.pre_process_conv.weight, where the max value position is 0, otherwise 1
-        non_max_value_index = torch.ones_like(model.module.pre_process_conv, dtype=torch.bool, device=model.module.pre_process_conv.device)
-        non_max_value_index.scatter_(1, max_value_index, 0)
-        
+        l1_regularization = torch.sum(torch.abs(regular_params))
         # max_value = torch.sum(torch.max(torch.abs(model.module.pre_process_conv), dim=1)[0])
         # l1_regularization -= max_value
-        l1_regularization *= lambda1 / model.module.pre_process_conv.numel()
+        l1_regularization *= lambda1 / (model.module.pre_process_conv.numel() + model.module.spacial_atten.numel())
+        
+        # Get the max value position of each in_channels, keep the same 4D shape as model.module.pre_process_conv.weight
+        Channel_max_value_index = torch.max(torch.abs(model.module.pre_process_conv), dim=1, keepdim=True)[1]
+        # get a boolean tensor shape same as model.module.pre_process_conv.weight, where the max value position is 0, otherwise 1
+        non_max_value_index = torch.ones_like(model.module.pre_process_conv, dtype=torch.bool, device=model.module.pre_process_conv.device)
+        non_max_value_index.scatter_(1, Channel_max_value_index, 0)
         
         # Custom penalty term to encourage weights to be close to 0 if is not the max value position, otherwise 1
         penalty = lambda2 * (torch.mean(torch.abs(model.module.pre_process_conv) * non_max_value_index) + 

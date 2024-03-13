@@ -114,6 +114,7 @@ class U2Net(nn.Module):
         #                                   padding=1)
         
         self.pre_process_conv = nn.Parameter(torch.ones(1, 71, 1, 1))
+        self.spacial_atten = nn.Parameter(torch.ones(1, 1, 1400, 1400))
         assert "encode" in cfg
         assert "decode" in cfg
         self.encode_num = len(cfg["encode"])
@@ -144,7 +145,7 @@ class U2Net(nn.Module):
     def forward(self, x: torch.Tensor) -> Union[torch.Tensor, List[torch.Tensor]]:
         _, _, h, w = x.shape
         # x = self.pre_process_conv(x)
-        x = x * self.pre_process_conv
+        x = x * self.pre_process_conv * self.spacial_atten
         # collect encode outputs
         encode_outputs = []
         for i, m in enumerate(self.encode_modules):

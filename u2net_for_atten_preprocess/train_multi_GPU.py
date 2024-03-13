@@ -213,7 +213,9 @@ def main(args):
     total_time = time.time() - start_time
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print('Training time {}'.format(total_time_str))
-    save_conv_weights(model_without_ddp, os.path.join(args.output_dir, 'conv_weights'))
+    # save_conv_weights(model_without_ddp, os.path.join(args.output_dir, 'conv_weights'))
+    atten_weights = model.module.pre_process_conv.cpu().detach().numpy().flatten()
+    np.savetxt('atten_weights.csv', atten_weights, delimiter=',')
 
 
 if __name__ == "__main__":
@@ -257,7 +259,7 @@ if __name__ == "__main__":
                         metavar='W', help='weight decay (default: 1e-4)',
                         dest='weight_decay')
 
-    parser.add_argument('--print-freq', default=20, type=int, help='print frequency')
+    parser.add_argument('--print-freq', default=50, type=int, help='print frequency')
 
     parser.add_argument('--output-dir', default='./u2net_for_atten_preprocess/multi_train/OSP/', help='path where to save')
 
