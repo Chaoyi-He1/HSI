@@ -15,8 +15,8 @@
                 "--nproc_per_node", "2", 
                 // "--use_env",
                 // "./Support_Vector_Regression/main.py",
-                "./Pixel_MLP/train_multi_GPU.py",
-                "--img_type", "rgb",
+                "./u2net_for_atten_preprocess/train_multi_GPU.py",
+                "--img_type", "OSP",
             ]
         }
     ]
