@@ -221,6 +221,20 @@ def u2net_lite(in_ch: int = 3, out_ch: int = 1):
     return U2Net(cfg, out_ch)
 
 
+def u2net_simple(in_ch: int = 3, out_ch: int = 1):
+    cfg = {
+        # height, in_ch, mid_ch, out_ch, RSU4F, side
+        "encode": [[3, in_ch, 16, 32, False, False],  # En1
+                   [2, 32, 16, 32, False, False],  # En2
+                   [2, 32, 16, 32, True, True]],  # En3
+        # height, in_ch, mid_ch, out_ch, RSU4F, side
+        "decode": [[2, 64, 16, 32, False, True],  # De2
+                   [3, 64, 16, 32, False, True]]  # De1
+    }
+
+    return U2Net(cfg, out_ch)
+
+
 def convert_onnx(m, save_path):
     m.eval()
     x = torch.rand(1, 3, 288, 288, requires_grad=True)

@@ -4,7 +4,7 @@ import datetime
 
 import torch
 
-from src import u2net_full, u2net_lite
+from src import u2net_full, u2net_lite, u2net_simple
 from train_eval_util import train_one_epoch, evaluate, create_lr_scheduler, init_distributed_mode, save_on_master, mkdir
 from my_dataset import HSI_Segmentation, HSI_Transformer, HSI_Transformer_all
 from torch.utils.tensorboard import SummaryWriter
@@ -14,7 +14,7 @@ import pandas as pd
 
 
 def create_model(in_chans, num_classes):
-    model = u2net_lite(in_ch=in_chans, out_ch=num_classes)
+    model = u2net_simple(in_ch=in_chans, out_ch=num_classes)
     return model
 
 
