@@ -227,10 +227,11 @@ def u2net_simple(in_ch: int = 3, out_ch: int = 1):
     cfg = {
         # height, in_ch, mid_ch, out_ch, RSU4F, side
         "encode": [[4, in_ch, 16, 32, False, False],  # En1
-                   [3, 32, 16, 32, False, False],  # En2
+                #    [3, 32, 16, 32, False, False],  # En2
                    [3, 32, 16, 32, True, True]],  # En3
         # height, in_ch, mid_ch, out_ch, RSU4F, side
-        "decode": [[3, 64, 16, 32, False, True],  # De2
+        "decode": [
+            # [3, 64, 16, 32, False, True],  # De2
                    [4, 64, 16, 32, False, True]]  # De1
     }
 

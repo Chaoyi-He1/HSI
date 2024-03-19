@@ -12,6 +12,7 @@ class Transformer_Encoder_cls(nn.Module):
                  drop_path=0.4, activation="relu", 
                  normalize_before=True, num_cls=18) -> None:
         super().__init__()
+        self.atten = nn.Parameter(torch.ones(1, 1, d_model))
         self.encoder = Transformer_Encoder(num_layers, norm, d_model, 
                                            nhead, dim_feedforward, dropout, 
                                            drop_path, activation, 
@@ -28,6 +29,7 @@ class Transformer_Encoder_cls(nn.Module):
         # src: (B, N, C)
         # src_mask: (B, N)
         pos = self.pos_embed(src)
+        src = src * self.atten
         src = self.encoder(src, src_mask, pos=pos)
         src = self.classify_head(src)
         return src

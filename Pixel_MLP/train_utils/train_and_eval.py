@@ -3,12 +3,15 @@ from torch import nn
 import train_utils.distributed_utils as utils
 
 
-def criterion(inputs, target):
+def criterion(inputs, target, model):
     losses = nn.functional.binary_cross_entropy_with_logits(inputs, target) if torch.max(target) <= 1 \
         else nn.functional.cross_entropy(inputs.transpose(1, 2), target.squeeze(-1))
     accuracy = torch.mean(((inputs > 0) == target.byte()).float()) if torch.max(target) <= 1 \
         else torch.mean((inputs.argmax(-1) == target.squeeze(-1)).float())
-    return losses, accuracy
+    
+    # L1 norm for model.atten
+    L1_norm = 0.6 * torch.mean(torch.abs(model.module.atten))
+    return losses + L1_norm, accuracy
 
 
 def evaluate(model, data_loader, device, num_classes, scaler=None):
@@ -42,7 +45,7 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, lr_scheduler, 
         # target = torch.squeeze(target, dim=1)
         with torch.cuda.amp.autocast(enabled=scaler is not None):
             output = model(image)
-            loss, acc = criterion(output, target)
+            loss, acc = criterion(output, target, model)
             assert not torch.isnan(loss), 'Model diverged with loss = NaN'
 
         optimizer.zero_grad()
