@@ -118,13 +118,14 @@ class HSI_Transformer(data.Dataset):
             
         self.img_files.sort()
         rgb = "rgb" if img_type == 'rgb' else ''
+        channel = "_ALL71channel" if img_type == 'ALL' else "_OSP10channel"
         self.mask_files = [img.replace(img.split(os.sep)[-1],
                                        os.path.splitext(
-                                           os.path.basename(img))[0].replace("_OSP10channel", "").replace(rgb, "")
+                                           os.path.basename(img))[0].replace(channel, "").replace(rgb, "")
                                        + "_" + label_type + '.mat') for img in self.img_files]
         rgb = "rgb" if img_type != 'rgb' else ''
         self.label_mask = [img.replace(img.split(os.sep)[-1], rgb
-                                       + os.path.splitext(os.path.basename(img))[0].replace("_OSP10channel", "")
+                                       + os.path.splitext(os.path.basename(img))[0].replace(channel, "")
                                        + "_gray.png") for img in self.img_files]
         # self.mask_files = [img.replace(img.split(os.sep)[-1], "label_" + label_type
         #                                + ".png") for img in self.img_files]
@@ -233,7 +234,7 @@ class HSI_Transformer_all(data.Dataset):
             
         self.img_files.sort()
         rgb = "rgb" if img_type == 'rgb' else ''
-        channel = "_ALL71channel" if img_type == 'ALL71' else "_OSP10channel"
+        channel = "_ALL71channel" if img_type == 'ALL' else "_OSP10channel"
         self.mask_files = [[img.replace(img.split(os.sep)[-1],
                                        os.path.splitext(
                                            os.path.basename(img))[0].replace(channel, "").replace(rgb, "")
