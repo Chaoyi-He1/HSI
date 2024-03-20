@@ -11,7 +11,12 @@ def criterion(inputs, target, model):
     
     # L1 norm for model.atten
     L1_norm = 0.6 * torch.mean(torch.abs(model.module.atten))
-    return losses + L1_norm, accuracy
+    
+    # Return losses with L1_norm if model is in training mode
+    if model.module.training:
+        return losses + L1_norm, accuracy
+    else:
+        return losses, accuracy
 
 
 def evaluate(model, data_loader, device, num_classes, scaler=None):
@@ -25,7 +30,7 @@ def evaluate(model, data_loader, device, num_classes, scaler=None):
             image, target = image.to(device), target.to(device)
             output = model(image)
             # output = output['out']
-            loss, acc = criterion(output, target.unsqueeze(-1))
+            loss, acc = criterion(output, target.unsqueeze(-1), model)
             
             metric_logger.update(loss=loss.item(), acc=acc.item())
 

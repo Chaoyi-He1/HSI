@@ -106,7 +106,7 @@ def main(args):
 
     print("Creating model")
     # create model num_classes equal background + 20 classes
-    model = create_model(in_chans=71 if args.img_type == "ALL" else 10, num_classes=num_classes)
+    model = create_model(in_chans=71 if args.img_type == "ALL" else 3, num_classes=num_classes)
     model.to(device)
     # load_conv_weights(model, os.path.join(args.output_dir, 'conv_weights'))
 
