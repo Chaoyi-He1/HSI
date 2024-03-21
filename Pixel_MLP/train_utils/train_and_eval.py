@@ -10,7 +10,7 @@ def criterion(inputs, target, model):
         else torch.mean((inputs.argmax(-1) == target.squeeze(-1)).float())
     
     # L1 norm for model.atten
-    L1_norm = 0.6 * torch.mean(torch.abs(model.module.atten))
+    L1_norm = 0.8 * torch.mean(torch.abs(model.module.atten))
     
     # Return losses with L1_norm if model is in training mode
     if model.module.training:

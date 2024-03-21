@@ -201,6 +201,11 @@ class HSI_Transformer(data.Dataset):
         images, targets = list(zip(*batch))
         batched_imgs = torch.stack(images, dim=0).flatten(0, 1)
         batched_targets = torch.stack(targets, dim=0).flatten(0, 1)
+        # if batched_imgs.shape[0] > 50000, randomly select 50000 samples
+        if batched_imgs.shape[0] > 50000:
+            index = np.random.choice(batched_imgs.shape[0], 50000, replace=False)
+            batched_imgs = batched_imgs[index]
+            batched_targets = batched_targets[index]
         return batched_imgs, batched_targets
 
 
