@@ -16,7 +16,7 @@ class Transformer_Encoder_cls(nn.Module):
         atten = torch.zeros(1, 1, d_model)
         indices = [x - 1 for x in [6, 44, 11, 70, 3, 56, 35, 50, 49, 67]]    # 6, 44, 11, 70, 3, 56, 35, 50, 49, 67
         weights = [1] * 10
-        atten[0, indices, 0, 0] = torch.tensor(weights)
+        atten[0, 0, indices] = torch.tensor(weights)
         self.register_buffer('atten', atten)
         
         self.encoder = Transformer_Encoder(num_layers, norm, d_model, 
