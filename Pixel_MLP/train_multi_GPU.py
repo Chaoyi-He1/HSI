@@ -31,15 +31,15 @@ def main(args):
 
     print("Creating data loaders")
     # load train data set
-    train_dataset = HSI_Transformer(data_path=args.train_data_path,
-                                    label_type=args.label_type,
-                                    img_type=args.img_type,
-                                   )
+    train_dataset = HSI_Transformer_all(data_path=args.train_data_path,
+                                        label_type=args.label_type,
+                                        img_type=args.img_type,
+                                       )
     # load validation data set
-    val_dataset = HSI_Transformer(data_path=args.val_data_path,
-                                  label_type=args.label_type,
-                                  img_type=args.img_type,
-                                 )
+    val_dataset = HSI_Transformer_all(data_path=args.val_data_path,
+                                      label_type=args.label_type,
+                                      img_type=args.img_type,
+                                     )
     
     if args.distributed:
         train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
@@ -170,13 +170,13 @@ if __name__ == "__main__":
 
     parser.add_argument('--train_data_path', default='/data2/chaoyi/HSI_Dataset/V2/train/', help='dataset')
     parser.add_argument('--val_data_path', default='/data2/chaoyi/HSI_Dataset/V2/test/', help='dataset')
-    parser.add_argument('--label_type', default='Building_Glass_label', help='label type: gray or viz')    # Roadlabel, Building_Concrete_label, Building_Glass_label, Car_white_label, Treelabel 
+    parser.add_argument('--label_type', default='Treelabel', help='label type: gray or viz')    # Roadlabel, Building_Concrete_label, Building_Glass_label, Car_white_label, Treelabel 
     parser.add_argument('--img_type', default='ALL', help='image type: OSP or PCA or rgb')
     parser.add_argument('--name', default='', help='renames results.txt to results_name.txt if supplied')
 
     parser.add_argument('--device', default='cuda', help='device')
 
-    parser.add_argument('--num-classes', default=1, type=int, help='num_classes')
+    parser.add_argument('--num-classes', default=6, type=int, help='num_classes')
 
     parser.add_argument('-b', '--batch-size', default=1, type=int,
                         help='images per gpu, the total batch size is $NGPU x batch_size')

@@ -211,7 +211,7 @@ class HSI_Transformer(data.Dataset):
 
 class HSI_Transformer_all(data.Dataset):
     def __init__(self, data_path: str = "", label_type: str = "gray", img_type: str = "OSP", 
-                 sequence_length: int = 50):
+                 sequence_length: int = 10):
         """
         Parameters:
             data_path: the path of the "HSI Dataset folder"
@@ -358,5 +358,9 @@ class HSI_Transformer_all(data.Dataset):
         images, targets = list(zip(*batch))
         batched_imgs = torch.stack(images, dim=0).flatten(0, 1)
         batched_targets = torch.stack(targets, dim=0).flatten(0, 1).to(dtype=torch.long)
+        if batched_imgs.shape[0] > 50000:
+            index = np.random.choice(batched_imgs.shape[0], 50000, replace=False)
+            batched_imgs = batched_imgs[index]
+            batched_targets = batched_targets[index]
         return batched_imgs, batched_targets
     

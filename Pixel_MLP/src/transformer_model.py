@@ -12,7 +12,13 @@ class Transformer_Encoder_cls(nn.Module):
                  drop_path=0.4, activation="relu", 
                  normalize_before=True, num_cls=18) -> None:
         super().__init__()
-        self.atten = nn.Parameter(torch.ones(1, 1, d_model))
+        # self.atten = nn.Parameter(torch.ones(1, 1, d_model))
+        atten = torch.zeros(1, 1, d_model)
+        indices = [x - 1 for x in [6, 44, 11, 70, 3, 56, 35, 50, 49, 67]]    # 6, 44, 11, 70, 3, 56, 35, 50, 49, 67
+        weights = [1] * 10
+        atten[0, indices, 0, 0] = torch.tensor(weights)
+        self.register_buffer('atten', atten)
+        
         self.encoder = Transformer_Encoder(num_layers, norm, d_model, 
                                            nhead, dim_feedforward, dropout, 
                                            drop_path, activation, 
