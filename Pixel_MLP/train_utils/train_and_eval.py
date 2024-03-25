@@ -14,7 +14,7 @@ def criterion(inputs, target, model):
     
     # Return losses with L1_norm if model is in training mode
     if model.module.training:
-        return losses + L1_norm, accuracy
+        return losses, accuracy
     else:
         return losses, accuracy
 
