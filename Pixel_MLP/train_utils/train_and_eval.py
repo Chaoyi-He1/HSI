@@ -14,7 +14,10 @@ def criterion(inputs, target, model):
     
     # Return losses with L1_norm if model is in training mode
     if model.module.training:
-        return losses, accuracy
+        if model.module.atten.grad is not None:
+            return losses + L1_norm, accuracy
+        else:
+            return losses, accuracy
     else:
         return losses, accuracy
 
