@@ -106,9 +106,9 @@ def main(args):
 
     print("Creating model")
     # create model num_classes equal background + 20 classes
-    model = create_model(in_chans=71 if args.img_type == "ALL" else 3, num_classes=num_classes)
+    model = create_model(in_chans=10 if args.img_type == "ALL" else 3, num_classes=num_classes)
     model.to(device)
-    # load_conv_weights(model, os.path.join(args.output_dir, 'conv_weights'))
+    load_conv_weights(model, os.path.join(args.output_dir, 'conv_weights'))
 
     if args.sync_bn:
         model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
@@ -227,7 +227,7 @@ if __name__ == "__main__":
     parser.add_argument('--train_data_path', default='/data2/chaoyi/HSI_Dataset/V2/train/', help='dataset')
     parser.add_argument('--val_data_path', default='/data2/chaoyi/HSI_Dataset/V2/test/', help='dataset')
     parser.add_argument('--label_type', default='Treelabel', help='label type: gray or viz')    # Car_white_label, Car_black_label
-    parser.add_argument('--img_type', default='OSP', help='image type: OSP or PCA or rgb')
+    parser.add_argument('--img_type', default='ALL', help='image type: OSP or PCA or rgb')
     parser.add_argument('--name', default='', help='renames results.txt to results_name.txt if supplied')
 
     parser.add_argument('--device', default='cuda', help='device')
