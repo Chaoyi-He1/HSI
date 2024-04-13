@@ -259,7 +259,11 @@ class HSI_Transformer_all(data.Dataset):
                             img.replace(img.split(os.sep)[-1],
                                        os.path.splitext(
                                            os.path.basename(img))[0].replace(channel, "").replace(rgb, "")
-                                       + "_" + "Treelabel" + '.mat'),] for img in self.img_files]
+                                       + "_" + "Treelabel" + '.mat'),
+                            img.replace(img.split(os.sep)[-1],
+                                       os.path.splitext(
+                                           os.path.basename(img))[0].replace(channel, "").replace(rgb, "")
+                                       + "_" + "Skylabel" + '.mat'),] for img in self.img_files]
         rgb = "rgb" if img_type != 'rgb' else ''
         self.label_mask = [img.replace(img.split(os.sep)[-1], rgb
                                        + os.path.splitext(os.path.basename(img))[0].replace(channel, "")
@@ -276,7 +280,7 @@ class HSI_Transformer_all(data.Dataset):
             "pole": 5,
             "traffic light": 6,
             "traffic sign": 7,
-            "vegetation": 8,
+            "tree": 8,
             "terrain": 9,
             "sky": 10,
             "person": 11,
@@ -295,6 +299,7 @@ class HSI_Transformer_all(data.Dataset):
             "Building_Glass_label": 2,
             "Car_white_label": 3,
             "Treelabel": 4,
+            "sky": 5,
         }
     
     def sanity_check(self):

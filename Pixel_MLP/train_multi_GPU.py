@@ -21,7 +21,7 @@ def main(args):
     print(args)
     if args.rank in [-1, 0]:
         print('Start Tensorboard with "tensorboard --logdir=runs", view at http://localhost:6006/')
-        tb_writer = SummaryWriter(comment=os.path.join("runs", args.img_type, args.name))
+        tb_writer = SummaryWriter()
 
     device = torch.device(args.device)
 
@@ -60,7 +60,7 @@ def main(args):
 
     print("Creating model")
     # create model num_classes equal background + 20 classes
-    model = create_model(num_classes=num_classes, in_chans=3 if args.img_type == "rgb" else 71)
+    model = create_model(num_classes=num_classes, in_chans=3 if args.img_type == "rgb" else 10)
     model.to(device)
 
     if args.sync_bn:
@@ -105,10 +105,10 @@ def main(args):
     for epoch in range(args.start_epoch, args.epochs + args.start_epoch):
         if args.distributed:
             train_sampler.set_epoch(epoch)
-        mean_loss, mean_acc, lr = train_one_epoch(model, optimizer, train_data_loader, device, epoch,
+        mean_loss, mean_acc, lr, confusion_mtx = train_one_epoch(model, optimizer, train_data_loader, device, epoch,
                                         lr_scheduler=lr_scheduler, print_freq=args.print_freq, scaler=scaler)
 
-        loss_val, acc_val  = evaluate(model, val_data_loader, device=device, num_classes=num_classes, scaler=scaler)
+        loss_val, acc_val, confusion_mtx_val  = evaluate(model, val_data_loader, device=device, num_classes=num_classes, scaler=scaler)
 
         # 只在主进程上进行写操作
         if args.rank in [-1, 0]:
@@ -131,9 +131,12 @@ def main(args):
                 #         'IoU/bicycle', 'IoU/background',
                 #         'mean_IoU']
                 tags = ['train_loss', 'train_acc', 'val_loss', 'val_acc']
-                values = [mean_loss, mean_acc, loss_val, acc_val]
+                values = [mean_loss, mean_acc, loss_val, acc_val,]
                 for x, tag in zip(values, tags):
                     tb_writer.add_scalar(tag, x, epoch)
+                # add confusion matrix to tensorboard
+                tb_writer.add_figure('confusion_matrix', confusion_mtx, epoch)
+                tb_writer.add_figure('confusion_matrix_val', confusion_mtx_val, epoch)
                     
             # write into txt
             with open(results_file, "a") as f:
@@ -171,12 +174,12 @@ if __name__ == "__main__":
     parser.add_argument('--train_data_path', default='/data2/chaoyi/HSI_Dataset/V2/train/', help='dataset')
     parser.add_argument('--val_data_path', default='/data2/chaoyi/HSI_Dataset/V2/test/', help='dataset')
     parser.add_argument('--label_type', default='Treelabel', help='label type: gray or viz')    # Roadlabel, Building_Concrete_label, Building_Glass_label, Car_white_label, Treelabel 
-    parser.add_argument('--img_type', default='ALL', help='image type: OSP or PCA or rgb')
+    parser.add_argument('--img_type', default='OSP', help='image type: OSP or PCA or rgb')
     parser.add_argument('--name', default='', help='renames results.txt to results_name.txt if supplied')
 
     parser.add_argument('--device', default='cuda', help='device')
 
-    parser.add_argument('--num-classes', default=6, type=int, help='num_classes')
+    parser.add_argument('--num-classes', default=7, type=int, help='num_classes')
 
     parser.add_argument('-b', '--batch-size', default=1, type=int,
                         help='images per gpu, the total batch size is $NGPU x batch_size')

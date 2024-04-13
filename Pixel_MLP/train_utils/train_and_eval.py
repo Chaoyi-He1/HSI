@@ -1,33 +1,51 @@
 import torch
 from torch import nn
+import seaborn as sn
+import pandas as pd
+import numpy as np
+from sklearn.metrics import confusion_matrix
+import matplotlib.pyplot as plt
 import train_utils.distributed_utils as utils
 
 
-def criterion(inputs, target, model):
+def criterion(inputs, target, model, num_classes=6):
     losses = nn.functional.binary_cross_entropy_with_logits(inputs, target) if torch.max(target) <= 1 \
         else nn.functional.cross_entropy(inputs.transpose(1, 2), target.squeeze(-1))
     accuracy = torch.mean(((inputs > 0) == target.byte()).float()) if torch.max(target) <= 1 \
         else torch.mean((inputs.argmax(-1) == target.squeeze(-1)).float())
     
-    # L1 norm for model.atten
-    L1_norm = 0.8 * torch.mean(torch.abs(model.module.atten))
+    # # Calculate the confusion matrix
+    # if num_classes == 6:
+    #     # Ensure inputs are on the same device and are flattened
+    #     preds = inputs.argmax(-1).view(-1)
+    #     labels = target.view(-1)
+
+    #     # Compute linear indices for the flattened confusion matrix
+    #     index = num_classes * labels + preds
+    #     confusion_matrix = torch.bincount(index, minlength=num_classes**2).view(num_classes, num_classes)
     
-    # Return losses with L1_norm if model is in training mode
-    if model.module.training:
-        if model.module.atten.grad is not None:
-            return losses + L1_norm, accuracy
-        else:
-            return losses, accuracy
-    else:
-        return losses, accuracy
+    # # L1 norm for model.atten
+    # L1_norm = 0.8 * torch.mean(torch.abs(model.module.atten))
+    
+    # # Return losses with L1_norm if model is in training mode
+    # if model.module.training:
+    #     if model.module.atten.grad is not None:
+    #         return losses + L1_norm, accuracy
+    #     else:
+    #         return losses, accuracy
+    # else:
+    #     return losses, accuracy, class_accuracy
+    return losses, accuracy
 
 
 def evaluate(model, data_loader, device, num_classes, scaler=None):
     model.eval()
     metric_logger = utils.MetricLogger(delimiter="  ")
-    metric_logger.add_meter('acc', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
-    metric_logger.add_meter('loss', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
+    metric_logger.add_meter('acc', utils.SmoothedValue(window_size=100, fmt='{value:.6f}'))
+    metric_logger.add_meter('loss', utils.SmoothedValue(window_size=100, fmt='{value:.6f}'))
     header = 'Test:'
+    all_preds, all_labels = [], []
+    
     with torch.no_grad(), torch.cuda.amp.autocast(enabled=scaler is not None):
         for image, target in metric_logger.log_every(data_loader, 10, header):
             image, target = image.to(device), target.to(device)
@@ -35,18 +53,41 @@ def evaluate(model, data_loader, device, num_classes, scaler=None):
             # output = output['out']
             loss, acc = criterion(output, target.unsqueeze(-1), model)
             
+            # store the predictions and labels
+            all_preds.append(output.argmax(-1).view(-1, 1).cpu().numpy().astype(int))
+            all_labels.append(target.view(-1, 1).cpu().numpy())
+            
             metric_logger.update(loss=loss.item(), acc=acc.item())
+    
+    metric_logger.synchronize_between_processes()
+    print("Averaged stats:", metric_logger)
+    
+    all_preds, all_labels = np.vstack(all_preds), np.vstack(all_labels)
+    # Check which label is missing in all_preds
+    missing_labels = [i for i in range(num_classes) if i not in all_labels]
+    if len(missing_labels) > 0:
+        print(f"Missing labels: {missing_labels}")
+    confusion_matrix_total = confusion_matrix(all_labels, all_preds)
+    classes = ["Road", "Building_Concrete", "Building_Glass", "Car_white", "Tree", "Background"]
+    df_cm = pd.DataFrame(confusion_matrix_total / \
+                            (np.sum(confusion_matrix_total, axis=1)[:, None] + \
+                                (np.sum(confusion_matrix_total, axis=1) == 0).astype(int)[:, None]), 
+                         index=[i for i in classes],
+                         columns=[i for i in classes])
+    plt.figure(figsize=(12, 10))
+    fig = sn.heatmap(df_cm, annot=True).get_figure()
 
-    return metric_logger.meters['loss'].global_avg, metric_logger.meters['acc'].global_avg
+    return metric_logger.meters['loss'].global_avg, metric_logger.meters['acc'].global_avg, fig
 
 
 def train_one_epoch(model, optimizer, data_loader, device, epoch, lr_scheduler, print_freq=10, scaler=None):
     model.train()
     metric_logger = utils.MetricLogger(delimiter="  ")
-    metric_logger.add_meter('lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
-    metric_logger.add_meter('loss', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
-    metric_logger.add_meter('acc', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
+    metric_logger.add_meter('lr', utils.SmoothedValue(window_size=100, fmt='{value:.6f}'))
+    metric_logger.add_meter('loss', utils.SmoothedValue(window_size=100, fmt='{value:.6f}'))
+    metric_logger.add_meter('acc', utils.SmoothedValue(window_size=100, fmt='{value:.6f}'))
     header = 'Epoch: [{}]'.format(epoch)
+    all_preds, all_labels = [], []
 
     for image, target in metric_logger.log_every(data_loader, print_freq, header):
         image, target = image.to(device), target.to(device).unsqueeze(-1)
@@ -55,6 +96,9 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, lr_scheduler, 
             output = model(image)
             loss, acc = criterion(output, target, model)
             assert not torch.isnan(loss), 'Model diverged with loss = NaN'
+            
+            all_labels.append(target.view(-1, 1).cpu().numpy())
+            all_preds.append(output.argmax(-1).view(-1, 1).cpu().numpy())
 
         optimizer.zero_grad()
         if scaler is not None:
@@ -69,9 +113,23 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, lr_scheduler, 
 
         lr = optimizer.param_groups[0]["lr"]
         metric_logger.update(loss=loss.item(), lr=lr, acc=acc.item())
-
+        
+    metric_logger.synchronize_between_processes()
+    print("Averaged stats:", metric_logger)
+    
+    all_preds, all_labels = np.vstack(all_preds), np.vstack(all_labels)
+    confusion_matrix_total = confusion_matrix(all_labels, all_preds)
+    classes = ["Road", "Building_Concrete", "Building_Glass", "Car_white", "Tree", "Sky","Background"]
+    df_cm = pd.DataFrame(confusion_matrix_total / \
+                            (np.sum(confusion_matrix_total, axis=1)[:, None] + \
+                                (np.sum(confusion_matrix_total, axis=1) == 0).astype(int)[:, None]), 
+                         index=[i for i in classes],
+                         columns=[i for i in classes])
+    plt.figure(figsize=(12, 10))
+    fig = sn.heatmap(df_cm, annot=True).get_figure()
+    
     return metric_logger.meters["loss"].global_avg, \
-           metric_logger.meters["acc"].global_avg, lr
+           metric_logger.meters["acc"].global_avg, lr, fig
 
 
 def create_lr_scheduler(optimizer,
