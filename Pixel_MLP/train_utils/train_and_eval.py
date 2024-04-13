@@ -68,7 +68,7 @@ def evaluate(model, data_loader, device, num_classes, scaler=None):
     if len(missing_labels) > 0:
         print(f"Missing labels: {missing_labels}")
     confusion_matrix_total = confusion_matrix(all_labels, all_preds)
-    classes = ["Road", "Building_Concrete", "Building_Glass", "Car_white", "Tree", "Background"]
+    classes = ["Road", "Building_Concrete", "Building_Glass", "Car_white", "Tree", "Sky", "Background"]
     df_cm = pd.DataFrame(confusion_matrix_total / \
                             (np.sum(confusion_matrix_total, axis=1)[:, None] + \
                                 (np.sum(confusion_matrix_total, axis=1) == 0).astype(int)[:, None]), 
