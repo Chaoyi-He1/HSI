@@ -17,7 +17,7 @@
                 // "./Support_Vector_Regression/main.py",
                 // "./u2net_for_atten_preprocess/train_multi_GPU.py",
                 "./Pixel_MLP/train_multi_GPU.py",
-                "--img_type", "OSP",
+                "--img_type", "ALL",
             ]
         }
     ]

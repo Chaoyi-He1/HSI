@@ -43,7 +43,7 @@ if __name__ == "__main__":
     parser.add_argument('--num-classes', default=1, type=int, help='num_classes')
     parser.add_argument('--img_type', default='OSP', help='image type: OSP or PCA or rgb')
     parser.add_argument('--output-dir', default='./Pixel_MLP/multi_train/OSP/', help='path where to save')
-    parser.add_argument('--resume', default='./Pixel_MLP/multi_train/OSP/model_053.pth', help='resume from checkpoint')
+    parser.add_argument('--resume', default='./Pixel_MLP/multi_train/OSP/model_008.pth', help='resume from checkpoint')
     args = parser.parse_args()
     
     main(args)

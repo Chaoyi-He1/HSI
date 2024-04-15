@@ -176,6 +176,7 @@ class HSI_Transformer(data.Dataset):
             if self.img_type != "rgb" else np.array(Image.open(self.img_files[index])).astype(np.float16)
         img = img[pixel_index, :]
         img = img[: img.shape[0] // self.sequence_length * self.sequence_length, :]
+        
         # check if img is empty
         if img.shape[0] == 0:
             return self.__getitem__(np.random.randint(0, len(self.img_files)))
@@ -344,6 +345,9 @@ class HSI_Transformer_all(data.Dataset):
             return self.__getitem__(np.random.randint(0, len(self.img_files)))
         
         img = img[pixel_index, :]
+        # only select the [6, 44, 11, 70, 3, 56, 35, 50, 49, 67, 47, 22] channels
+        img = img[:, [6, 44, 11, 70, 3, 56, 35, 50, 49, 67, 47, 22]]
+        
         if img.shape[0] == 0:
             return self.__getitem__(np.random.randint(0, len(self.img_files)))
         img = img[: img.shape[0] // self.sequence_length * self.sequence_length, :]

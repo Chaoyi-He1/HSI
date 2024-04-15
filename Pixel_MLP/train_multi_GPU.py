@@ -34,12 +34,12 @@ def main(args):
     train_dataset = HSI_Transformer_all(data_path=args.train_data_path,
                                         label_type=args.label_type,
                                         img_type=args.img_type,
-                                       )
+                                        )
     # load validation data set
     val_dataset = HSI_Transformer_all(data_path=args.val_data_path,
                                       label_type=args.label_type,
                                       img_type=args.img_type,
-                                     )
+                                      )
     
     if args.distributed:
         train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
@@ -60,8 +60,11 @@ def main(args):
 
     print("Creating model")
     # create model num_classes equal background + 20 classes
-    model = create_model(num_classes=num_classes, in_chans=3 if args.img_type == "rgb" else 10)
+    model = create_model(num_classes=num_classes, in_chans=3 if args.img_type == "rgb" else 12)
     model.to(device)
+    
+    num_parameters, num_layers = sum(p.numel() for p in model.parameters() if p.requires_grad), len(list(model.parameters()))
+    print(f"Number of parameters: {num_parameters}, number of layers: {num_layers}")
 
     if args.sync_bn:
         model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
@@ -173,7 +176,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--train_data_path', default='/data2/chaoyi/HSI_Dataset/V2/train/', help='dataset')
     parser.add_argument('--val_data_path', default='/data2/chaoyi/HSI_Dataset/V2/test/', help='dataset')
-    parser.add_argument('--label_type', default='Treelabel', help='label type: gray or viz')    # Roadlabel, Building_Concrete_label, Building_Glass_label, Car_white_label, Treelabel 
+    parser.add_argument('--label_type', default='Skylabel', help='label type: gray or viz')    # Roadlabel, Building_Concrete_label, Building_Glass_label, Car_white_label, Treelabel 
     parser.add_argument('--img_type', default='OSP', help='image type: OSP or PCA or rgb')
     parser.add_argument('--name', default='', help='renames results.txt to results_name.txt if supplied')
 

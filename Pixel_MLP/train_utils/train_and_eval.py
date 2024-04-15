@@ -29,12 +29,12 @@ def criterion(inputs, target, model, num_classes=6):
     
     # # Return losses with L1_norm if model is in training mode
     # if model.module.training:
-    #     if model.module.atten.grad is not None:
+    #     if model.module.atten.requires_grad:
     #         return losses + L1_norm, accuracy
     #     else:
     #         return losses, accuracy
     # else:
-    #     return losses, accuracy, class_accuracy
+    #     return losses, accuracy
     return losses, accuracy
 
 
@@ -69,6 +69,7 @@ def evaluate(model, data_loader, device, num_classes, scaler=None):
         print(f"Missing labels: {missing_labels}")
     confusion_matrix_total = confusion_matrix(all_labels, all_preds)
     classes = ["Road", "Building_Concrete", "Building_Glass", "Car_white", "Tree", "Sky", "Background"]
+    # classes = ["Sky", "Background"]
     df_cm = pd.DataFrame(confusion_matrix_total / \
                             (np.sum(confusion_matrix_total, axis=1)[:, None] + \
                                 (np.sum(confusion_matrix_total, axis=1) == 0).astype(int)[:, None]), 
@@ -120,6 +121,7 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, lr_scheduler, 
     all_preds, all_labels = np.vstack(all_preds), np.vstack(all_labels)
     confusion_matrix_total = confusion_matrix(all_labels, all_preds)
     classes = ["Road", "Building_Concrete", "Building_Glass", "Car_white", "Tree", "Sky","Background"]
+    # classes = ["Sky", "Background"]
     df_cm = pd.DataFrame(confusion_matrix_total / \
                             (np.sum(confusion_matrix_total, axis=1)[:, None] + \
                                 (np.sum(confusion_matrix_total, axis=1) == 0).astype(int)[:, None]), 
