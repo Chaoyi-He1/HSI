@@ -338,6 +338,7 @@ class HSI_Transformer_all(data.Dataset):
         
         img = sio.loadmat(self.img_files[index])["filtered_img"].astype(np.float16) \
             if self.img_type != "rgb" else np.array(Image.open(self.img_files[index])).astype(np.float16)
+        img_pos = np.indices(img.shape[:2]).transpose(1, 2, 0)
 
         endmember_label, pixel_index = self.creat_endmember_label(index, img)
         # Check if endmember_label only contains "5", if so, raise an error
@@ -345,31 +346,36 @@ class HSI_Transformer_all(data.Dataset):
             return self.__getitem__(np.random.randint(0, len(self.img_files)))
         
         img = img[pixel_index, :]
+        img_pos = img_pos[pixel_index, :]
         # only select the [6, 44, 11, 70, 3, 56, 35, 50, 49, 67, 47, 22] channels
         img = img[:, [6, 44, 11, 70, 3, 56, 35, 50, 49, 67, 47, 22]]
         
         if img.shape[0] == 0:
             return self.__getitem__(np.random.randint(0, len(self.img_files)))
-        img = img[: img.shape[0] // self.sequence_length * self.sequence_length, :]
+        img = img[:img.shape[0] // self.sequence_length * self.sequence_length, :]
+        img_pos = img_pos[:img_pos.shape[0] // self.sequence_length * self.sequence_length, :]
         endmember_label = endmember_label[pixel_index]
-        endmember_label = endmember_label[: endmember_label.shape[0] // self.sequence_length * self.sequence_length]
+        endmember_label = endmember_label[:endmember_label.shape[0] // self.sequence_length * self.sequence_length]
            
         img = torch.from_numpy(img).view(-1, self.sequence_length, img.shape[1]).contiguous()
+        img_pos = np.reshape(img_pos, (-1, self.sequence_length, 2))
         target = torch.from_numpy(endmember_label).view(-1, self.sequence_length).contiguous()
         
-        return img, target
+        return img, target, img_pos
 
     def __len__(self):
         return len(self.img_files)
 
     @staticmethod
     def collate_fn(batch):
-        images, targets = list(zip(*batch))
+        images, targets, img_pos = list(zip(*batch))
         batched_imgs = torch.stack(images, dim=0).flatten(0, 1)
         batched_targets = torch.stack(targets, dim=0).flatten(0, 1).to(dtype=torch.long)
+        batched_img_pos = np.vstack(img_pos, axis=0)
         if batched_imgs.shape[0] > 50000:
             index = np.random.choice(batched_imgs.shape[0], 50000, replace=False)
             batched_imgs = batched_imgs[index]
             batched_targets = batched_targets[index]
-        return batched_imgs, batched_targets
+            batched_img_pos = batched_img_pos[index]
+        return batched_imgs, batched_targets, batched_img_pos
     
