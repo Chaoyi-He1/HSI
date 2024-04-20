@@ -108,7 +108,9 @@ def main(args):
     # create model num_classes equal background + 20 classes
     model = create_model(in_chans=10 if args.img_type == "ALL" else 3, num_classes=num_classes)
     model.to(device)
-    load_conv_weights(model, os.path.join(args.output_dir, 'conv_weights'))
+    num_parameters, num_layers = sum(p.numel() for p in model.parameters() if p.requires_grad), len(list(model.parameters()))
+    print(f"Number of parameters: {num_parameters}, number of layers: {num_layers}")
+    # load_conv_weights(model, os.path.join(args.output_dir, 'conv_weights'))
 
     if args.sync_bn:
         model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)

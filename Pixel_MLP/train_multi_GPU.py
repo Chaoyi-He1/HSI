@@ -60,7 +60,7 @@ def main(args):
 
     print("Creating model")
     # create model num_classes equal background + 20 classes
-    model = create_model(num_classes=num_classes, in_chans=3 if args.img_type == "rgb" else 12)
+    model = create_model(num_classes=num_classes, in_chans=3 if args.img_type == "rgb" else 89)
     model.to(device)
     
     num_parameters, num_layers = sum(p.numel() for p in model.parameters() if p.requires_grad), len(list(model.parameters()))

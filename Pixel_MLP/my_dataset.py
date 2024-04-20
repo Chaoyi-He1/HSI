@@ -240,7 +240,12 @@ class HSI_Transformer_all(data.Dataset):
             
         self.img_files.sort()
         rgb = "rgb" if img_type == 'rgb' else ''
-        channel = "_ALL71channel" if img_type == 'ALL' else "_OSP10channel"
+        if img_type == "ALL":
+            channel = "_ALL71channel" 
+        elif img_type == "OSP":
+            channel = "_OSP10channel"
+        else:
+            channel = "_RAW"
         self.mask_files = [[img.replace(img.split(os.sep)[-1],
                                        os.path.splitext(
                                            os.path.basename(img))[0].replace(channel, "").replace(rgb, "")
@@ -348,7 +353,7 @@ class HSI_Transformer_all(data.Dataset):
         img = img[pixel_index, :]
         img_pos = img_pos[pixel_index, :]
         # only select the [6, 44, 11, 70, 3, 56, 35, 50, 49, 67, 47, 22] channels
-        img = img[:, [6, 44, 11, 70, 3, 56, 35, 50, 49, 67, 47, 22]]
+        # img = img[:, [6, 44, 11, 70, 3, 56, 35, 50, 49, 67, 47, 22]]
         
         if img.shape[0] == 0:
             return self.__getitem__(np.random.randint(0, len(self.img_files)))

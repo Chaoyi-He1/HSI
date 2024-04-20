@@ -47,7 +47,7 @@ def evaluate(model, data_loader, device, num_classes, scaler=None):
     all_preds, all_labels = [], []
     
     with torch.no_grad(), torch.cuda.amp.autocast(enabled=scaler is not None):
-        for image, target in metric_logger.log_every(data_loader, 10, header):
+        for image, target, _ in metric_logger.log_every(data_loader, 10, header):
             image, target = image.to(device), target.to(device)
             output = model(image)
             # output = output['out']
@@ -90,7 +90,7 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, lr_scheduler, 
     header = 'Epoch: [{}]'.format(epoch)
     all_preds, all_labels = [], []
 
-    for image, target in metric_logger.log_every(data_loader, print_freq, header):
+    for image, target, _ in metric_logger.log_every(data_loader, print_freq, header):
         image, target = image.to(device), target.to(device).unsqueeze(-1)
         # target = torch.squeeze(target, dim=1)
         with torch.cuda.amp.autocast(enabled=scaler is not None):

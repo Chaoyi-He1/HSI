@@ -201,8 +201,8 @@ def main(args):
         
         # add color's label name to the figure
         for i, (label, color) in enumerate(endmember_label_color.items()):
-            ax[0].text(10, 30 + 40 * i, label, color=color / 255, fontsize=15)
-            ax[1].text(10, 30 + 40 * i, label, color=color / 255, fontsize=15)
+            ax[0].text(10, 60 + 50 * i, label, color=color / 255, fontsize=15)
+            ax[1].text(10, 60 + 50 * i, label, color=color / 255, fontsize=15)
         # save the figure
         plt.savefig(os.path.join(args.output_dir, pic_folder + ".png"))
         

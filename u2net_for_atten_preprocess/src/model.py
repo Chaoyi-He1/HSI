@@ -107,11 +107,11 @@ class RSU4F(nn.Module):
 class U2Net(nn.Module):
     def __init__(self, cfg: dict, out_ch: int = 1):
         super().__init__()
-        self.pre_process_conv = nn.Conv2d(in_channels=71,
-                                          out_channels=cfg["encode"][0][1],
-                                          kernel_size=3,
-                                          stride=1,
-                                          padding=1)
+        # self.pre_process_conv = nn.Conv2d(in_channels=71,
+        #                                   out_channels=cfg["encode"][0][1],
+        #                                   kernel_size=3,
+        #                                   stride=1,
+        #                                   padding=1)
         
         # self.pre_process_conv = nn.Parameter(torch.ones(1, 71, 1, 1))
         # self.spacial_atten = nn.Parameter(torch.ones(1, 1, 1400, 1400))
@@ -145,7 +145,7 @@ class U2Net(nn.Module):
     def forward(self, x: torch.Tensor) -> Union[torch.Tensor, List[torch.Tensor]]:
         _, _, h, w = x.shape
         
-        x = self.pre_process_conv(x)
+        # x = self.pre_process_conv(x)
         # x = x * self.pre_process_conv * self.spacial_atten
         
         # collect encode outputs
@@ -227,11 +227,11 @@ def u2net_simple(in_ch: int = 3, out_ch: int = 1):
     cfg = {
         # height, in_ch, mid_ch, out_ch, RSU4F, side
         "encode": [[4, in_ch, 16, 32, False, False],  # En1
-                   [3, 32, 16, 32, False, False],  # En2
+                #    [3, 32, 16, 32, False, False],  # En2
                    [3, 32, 16, 32, True, True]],  # En3
         # height, in_ch, mid_ch, out_ch, RSU4F, side
         "decode": [
-                   [3, 64, 16, 32, False, True],  # De2
+                #    [3, 64, 16, 32, False, True],  # De2
                    [4, 64, 16, 32, False, True]]  # De1
     }
 
