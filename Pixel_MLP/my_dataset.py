@@ -384,3 +384,49 @@ class HSI_Transformer_all(data.Dataset):
             batched_img_pos = batched_img_pos[index]
         return batched_imgs, batched_targets, batched_img_pos
     
+    
+class HSI_Drive(data.Dataset):
+    def __init__(self, data_path: str = "", use_MF: bool = True, use_dual: bool = True,
+                 use_OSP: bool = True):
+        self.use_MF = use_MF
+        self.use_dual = use_dual
+        self.use_OSP = use_OSP
+        
+        self.data_folder_path = os.path.join(data_path, "cubes_fl32")
+        self.data_folder_path = os.path.join(self.data_folder_path, "MF") if use_MF else self.data_folder_path
+        self.data_folder_path = os.path.join(self.data_folder_path, "Dual_HVI") if use_dual else os.path.join(self.data_folder_path, "Sin_HVI")
+        
+        self.label_folder_path = os.path.join(data_path, "labels")
+        
+        self.data_paths = [os.path.join(self.data_folder_path, file) for file in os.listdir(self.data_folder_path) if file.endswith(".mat")]
+        self.label_paths = [file.replace("cubes_fl32", "labels").replace(".mat", ".png") for file in self.data_paths]
+        
+        for i in range(len(self.data_paths) - 1, -1, -1):
+            if not os.path.isfile(self.label_paths[i]):
+                del self.data_paths[i]
+                del self.label_paths[i]
+        
+        assert len(self.data_paths) == len(self.label_paths) and len(self.data_paths) > 0, "The number of data files and label files are not equal."
+    
+    def __getitem__(self, index):
+        img = sio.loadmat(self.data_paths[index])["filtered_img"]
+        label = np.array(Image.open(self.label_paths[index]))
+        img_pos = np.indices(img.shape[:2]).transpose(1, 2, 0)
+        
+        img = img.reshape(-1, img.shape[-1])
+        img_pos = img_pos.reshape(-1, 2)
+        label = label.reshape(-1)
+
+        return img, label, img_pos
+    
+    def __len__(self):
+        return len(self.data_paths)
+    
+    @staticmethod
+    def collate_fn(batch):
+        images, targets, img_pos = list(zip(*batch))
+        batched_imgs = torch.stack(images, dim=0).flatten(0, 1)
+        batched_targets = torch.stack(targets, dim=0).flatten(0, 1).to(dtype=torch.long)
+        batched_img_pos = np.vstack(img_pos, axis=0)
+        return batched_imgs, batched_targets, batched_img_pos
+    
