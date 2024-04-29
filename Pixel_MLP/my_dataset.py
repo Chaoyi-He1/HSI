@@ -407,15 +407,42 @@ class HSI_Drive(data.Dataset):
                 del self.label_paths[i]
         
         assert len(self.data_paths) == len(self.label_paths) and len(self.data_paths) > 0, "The number of data files and label files are not equal."
+
+        self.hsi_drive_original_label = {
+            1: "Road",
+            2: "Road marks",
+            3: "Vegetation",
+            4: "Painted Metal",
+            5: "Sky",
+            6: "Concrete/Stone/Brick",
+            7: "Pedestrian/Cyclist",
+            8: "Water",
+            9: "Unpainted Metal",
+            10: "Glass/Transparent Plastic",
+        }
+        self.selected_labels = [1, 3, 4, 5, 6, 8, 9, 10]
+        
+    def relabeling(self, label):
+        for k, v in self.hsi_drive_original_label.items():
+            if k not in self.selected_labels:
+                label[label == k] = 255
+        return label
+        
     
     def __getitem__(self, index):
         img = sio.loadmat(self.data_paths[index])["filtered_img"]
         label = np.array(Image.open(self.label_paths[index]))
+        label = self.relabeling(label)
         img_pos = np.indices(img.shape[:2]).transpose(1, 2, 0)
         
         img = img.reshape(-1, img.shape[-1])
         img_pos = img_pos.reshape(-1, 2)
         label = label.reshape(-1)
+        
+        if self.use_OSP and not self.use_dual:
+            img = img[:, [60, 44, 17, 27, 53, 4, 1, 20, 71, 13]]
+        elif self.use_OSP and self.use_dual:
+            img = img[:, [42, 34, 16, 230, 95, 243, 218, 181, 11, 193]]
 
         return img, label, img_pos
     

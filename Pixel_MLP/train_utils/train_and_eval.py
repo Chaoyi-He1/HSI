@@ -10,7 +10,7 @@ import train_utils.distributed_utils as utils
 
 def criterion(inputs, target, model, num_classes=6):
     losses = nn.functional.binary_cross_entropy_with_logits(inputs, target) if torch.max(target) <= 1 \
-        else nn.functional.cross_entropy(inputs.transpose(1, 2), target.squeeze(-1))
+        else nn.functional.cross_entropy(inputs.transpose(1, 2), target.squeeze(-1), ignore_index=255)
     accuracy = torch.mean(((inputs > 0) == target.byte()).float()) if torch.max(target) <= 1 \
         else torch.mean((inputs.argmax(-1) == target.squeeze(-1)).float())
     
@@ -68,7 +68,7 @@ def evaluate(model, data_loader, device, num_classes, scaler=None):
     if len(missing_labels) > 0:
         print(f"Missing labels: {missing_labels}")
     confusion_matrix_total = confusion_matrix(all_labels, all_preds)
-    classes = ["Road", "Building_Concrete", "Building_Glass", "Car_white", "Tree", "Sky", "Background"]
+    classes = ["Road", "Vegetation", "Painted Metal", "Sky", "Concrete/Stone/Brick", "Water", "Unpainted Metal", "Glass/Transparent Plastic"]
     # classes = ["Sky", "Background"]
     df_cm = pd.DataFrame(confusion_matrix_total / \
                             (np.sum(confusion_matrix_total, axis=1)[:, None] + \
@@ -120,7 +120,7 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, lr_scheduler, 
     
     all_preds, all_labels = np.vstack(all_preds), np.vstack(all_labels)
     confusion_matrix_total = confusion_matrix(all_labels, all_preds)
-    classes = ["Road", "Building_Concrete", "Building_Glass", "Car_white", "Tree", "Sky","Background"]
+    classes = ["Road", "Vegetation", "Painted Metal", "Sky", "Concrete/Stone/Brick", "Water", "Unpainted Metal", "Glass/Transparent Plastic"]
     # classes = ["Sky", "Background"]
     df_cm = pd.DataFrame(confusion_matrix_total / \
                             (np.sum(confusion_matrix_total, axis=1)[:, None] + \
