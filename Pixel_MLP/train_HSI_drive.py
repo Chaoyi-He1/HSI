@@ -36,7 +36,7 @@ def main(args):
                               use_MF=args.use_MF,
                               use_dual=args.use_dual,
                               use_OSP=args.use_OSP)
-    train_dataset, val_dataset = random_split(whole_dataset, [int(len(whole_dataset) * 0.8), len(whole_dataset) - int(len(whole_dataset) * 0.8)])
+    train_dataset, val_dataset = stratified_split(whole_dataset, train_ratio=0.8)
 
     
     if args.distributed:

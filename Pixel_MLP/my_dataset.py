@@ -4,6 +4,8 @@ import torch.utils.data as data
 from PIL import Image
 import numpy as np
 import torch
+from torch.utils.data import Subset
+from collections import defaultdict
 
 
 def cat_list(images, fill_value=0):
@@ -472,4 +474,37 @@ class HSI_Drive(data.Dataset):
         # print max and min of label ignoring 255
         # print(f"Max label: {torch.max(batched_targets[batched_targets != 255])}, Min label: {torch.min(batched_targets[batched_targets != 255])}")
         return batched_imgs, batched_targets, batched_img_pos
+
+
+def stratified_split(dataset, train_ratio=0.8):
+    # split the dataset into train and validation set, the dataset is for pixel-wise classification
+    # the label of each img is in shape (H*W, 1), as a tensor, so we need to split the dataset based on the label
+    # make sure the train and validation all have the same distribution of the label
+
+    label_dict = defaultdict(list)
+    for i in range(len(dataset)):
+        _, target, _ = dataset[i]
+        label_dict[tuple(target.unique().tolist())].append(i)
+        
+    train_indices, train_labels = [], []
+    val_indices, val_labels = [], []
+    for labels, indices in label_dict.items():
+        np.random.shuffle(indices)
+        split = int(np.floor(train_ratio * len(indices)))
+        
+        train_indices.extend(indices[:split])
+        val_indices.extend(indices[split:])
+        
+        #change labels tuple to list
+        labels = list(labels)
+        train_labels.extend(labels[:split])
+        val_labels.extend(labels[split:])
     
+    #check unique labels in train and val
+    train_labels = set(train_labels)
+    val_labels = set(val_labels)
+    
+    train_dataset = Subset(dataset, train_indices)
+    val_dataset = Subset(dataset, val_indices)
+    return train_dataset, val_dataset
+        
