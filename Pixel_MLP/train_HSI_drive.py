@@ -52,7 +52,7 @@ def main(args):
         collate_fn=whole_dataset.collate_fn, drop_last=True)
 
     val_data_loader = torch.utils.data.DataLoader(
-        val_dataset, batch_size=1,
+        val_dataset, batch_size=args.batch_size,
         sampler=test_sampler, num_workers=args.workers,
         collate_fn=whole_dataset.collate_fn)
 
@@ -111,7 +111,7 @@ def main(args):
         if args.distributed:
             train_sampler.set_epoch(epoch)
         mean_loss, mean_acc, lr, confusion_mtx = train_one_epoch(model, optimizer, train_data_loader, device, epoch,
-                                        lr_scheduler=lr_scheduler, print_freq=args.print_freq, scaler=scaler)
+                                        lr_scheduler=lr_scheduler, print_freq=args.print_freq, scaler=scaler, num_classes=num_classes)
 
         loss_val, acc_val, confusion_mtx_val  = evaluate(model, val_data_loader, device=device, num_classes=num_classes, scaler=scaler)
 
@@ -169,7 +169,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--device', default='cuda', help='device')
 
-    parser.add_argument('--num-classes', default=8, type=int, help='num_classes')
+    parser.add_argument('--num-classes', default=7, type=int, help='num_classes')
 
     parser.add_argument('-b', '--batch-size', default=8, type=int,
                         help='images per gpu, the total batch size is $NGPU x batch_size')
@@ -194,7 +194,7 @@ if __name__ == "__main__":
                         metavar='W', help='weight decay (default: 1e-4)',
                         dest='weight_decay')
 
-    parser.add_argument('--print-freq', default=20, type=int, help='print frequency')
+    parser.add_argument('--print-freq', default=5, type=int, help='print frequency')
 
     parser.add_argument('--output-dir', default='./Pixel_MLP/multi_train/HSI_drive/OSP', help='path where to save')
 

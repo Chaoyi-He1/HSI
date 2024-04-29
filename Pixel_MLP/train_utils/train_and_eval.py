@@ -70,7 +70,7 @@ def evaluate(model, data_loader, device, num_classes, scaler=None):
     if len(missing_labels) > 0:
         print(f"Missing labels: {missing_labels}")
     confusion_matrix_total = confusion_matrix(all_labels, all_preds)
-    classes = ["Road", "Vegetation", "Painted Metal", "Sky", "Concrete/Stone/Brick", "Water", "Unpainted Metal", "Glass/Transparent Plastic"]
+    classes = ["Road", "Vegetation", "Painted Metal", "Sky", "Concrete/Stone/Brick", "Unpainted Metal", "Glass/Transparent Plastic"]
     # classes = ["Sky", "Background"]
     df_cm = pd.DataFrame(confusion_matrix_total / \
                             (np.sum(confusion_matrix_total, axis=1)[:, None] + \
@@ -83,7 +83,7 @@ def evaluate(model, data_loader, device, num_classes, scaler=None):
     return metric_logger.meters['loss'].global_avg, metric_logger.meters['acc'].global_avg, fig
 
 
-def train_one_epoch(model, optimizer, data_loader, device, epoch, lr_scheduler, print_freq=10, scaler=None):
+def train_one_epoch(model, optimizer, data_loader, device, epoch, lr_scheduler, print_freq=10, scaler=None, num_classes=6):
     model.train()
     metric_logger = utils.MetricLogger(delimiter="  ")
     metric_logger.add_meter('lr', utils.SmoothedValue(window_size=100, fmt='{value:.6f}'))
@@ -121,10 +121,13 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, lr_scheduler, 
     print("Averaged stats:", metric_logger)
     
     all_preds, all_labels = np.vstack(all_preds), np.vstack(all_labels)
+    missing_labels = [i for i in range(num_classes) if i not in all_labels]
+    if len(missing_labels) > 0:
+        print(f"Missing labels: {missing_labels}")
     # remove the 255 ground truth label
     all_preds, all_labels = all_preds[all_labels != 255], all_labels[all_labels != 255]
     confusion_matrix_total = confusion_matrix(all_labels, all_preds)
-    classes = ["Road", "Vegetation", "Painted Metal", "Sky", "Concrete/Stone/Brick", "Water", "Unpainted Metal", "Glass/Transparent Plastic"]
+    classes = ["Road", "Vegetation", "Painted Metal", "Sky", "Concrete/Stone/Brick", "Unpainted Metal", "Glass/Transparent Plastic"]
     # classes = ["Sky", "Background"]
     df_cm = pd.DataFrame(confusion_matrix_total / \
                             (np.sum(confusion_matrix_total, axis=1)[:, None] + \

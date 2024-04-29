@@ -430,7 +430,7 @@ class HSI_Drive(data.Dataset):
             9: "Unpainted Metal",
             10: "Glass/Transparent Plastic",
         }
-        self.selected_labels = [1, 3, 4, 5, 6, 8, 9, 10]
+        self.selected_labels = [1, 3, 4, 5, 6, 9, 10]
         
     def relabeling(self, label):
         for k, v in self.hsi_drive_original_label.items():
@@ -497,12 +497,15 @@ def stratified_split(dataset, train_ratio=0.8):
         
         #change labels tuple to list
         labels = list(labels)
-        train_labels.extend(labels[:split])
-        val_labels.extend(labels[split:])
+        if indices[:split] is not None:
+            train_labels.extend(labels)
+        if indices[split:] is not None:
+            val_labels.extend(labels)
     
     #check unique labels in train and val
     train_labels = set(train_labels)
     val_labels = set(val_labels)
+    print(f"Unique labels in train: {train_labels}, Unique labels in val: {val_labels}")
     
     train_dataset = Subset(dataset, train_indices)
     val_dataset = Subset(dataset, val_indices)
