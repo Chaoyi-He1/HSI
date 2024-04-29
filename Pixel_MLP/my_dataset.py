@@ -396,10 +396,18 @@ class HSI_Drive(data.Dataset):
         self.data_folder_path = os.path.join(self.data_folder_path, "MF") if use_MF else self.data_folder_path
         self.data_folder_path = os.path.join(self.data_folder_path, "Dual_HVI") if use_dual else os.path.join(self.data_folder_path, "Sin_HVI")
         
-        self.label_folder_path = os.path.join(data_path, "labels")
+        path_ext = ""
+        if use_MF:
+            path_ext += "/MF"
+        if use_dual:
+            path_ext += "/Dual_HVI"
+        elif not use_dual:
+            path_ext += "/Sin_HVI"
+        
+        name_ext = "_MF_TC" if use_MF else "_TC"
         
         self.data_paths = [os.path.join(self.data_folder_path, file) for file in os.listdir(self.data_folder_path) if file.endswith(".mat")]
-        self.label_paths = [file.replace("cubes_fl32", "labels").replace(".mat", ".png") for file in self.data_paths]
+        self.label_paths = [file.replace("cubes_fl32", "labels").replace(path_ext, "").replace(name_ext, "").replace(".mat", ".png") for file in self.data_paths]
         
         for i in range(len(self.data_paths) - 1, -1, -1):
             if not os.path.isfile(self.label_paths[i]):
@@ -426,6 +434,9 @@ class HSI_Drive(data.Dataset):
         for k, v in self.hsi_drive_original_label.items():
             if k not in self.selected_labels:
                 label[label == k] = 255
+        # relabel the label from 0 to end, with 255 as the background
+        for i, k in enumerate(self.selected_labels):
+            label[label == k] = i
         return label
         
     
@@ -443,6 +454,9 @@ class HSI_Drive(data.Dataset):
             img = img[:, [60, 44, 17, 27, 53, 4, 1, 20, 71, 13]]
         elif self.use_OSP and self.use_dual:
             img = img[:, [42, 34, 16, 230, 95, 243, 218, 181, 11, 193]]
+        
+        img = torch.from_numpy(img).to(dtype=torch.float32)
+        label = torch.from_numpy(label).to(dtype=int)
 
         return img, label, img_pos
     
@@ -454,6 +468,8 @@ class HSI_Drive(data.Dataset):
         images, targets, img_pos = list(zip(*batch))
         batched_imgs = torch.stack(images, dim=0).flatten(0, 1)
         batched_targets = torch.stack(targets, dim=0).flatten(0, 1).to(dtype=torch.long)
-        batched_img_pos = np.vstack(img_pos, axis=0)
+        batched_img_pos = np.vstack(img_pos)
+        # print max and min of label ignoring 255
+        # print(f"Max label: {torch.max(batched_targets[batched_targets != 255])}, Min label: {torch.min(batched_targets[batched_targets != 255])}")
         return batched_imgs, batched_targets, batched_img_pos
     

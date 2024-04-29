@@ -10,7 +10,7 @@ import train_utils.distributed_utils as utils
 
 def criterion(inputs, target, model, num_classes=6):
     losses = nn.functional.binary_cross_entropy_with_logits(inputs, target) if torch.max(target) <= 1 \
-        else nn.functional.cross_entropy(inputs.transpose(1, 2), target.squeeze(-1), ignore_index=255)
+        else nn.functional.cross_entropy(inputs, target.squeeze(-1), ignore_index=255)
     accuracy = torch.mean(((inputs > 0) == target.byte()).float()) if torch.max(target) <= 1 \
         else torch.mean((inputs.argmax(-1) == target.squeeze(-1)).float())
     
@@ -63,6 +63,8 @@ def evaluate(model, data_loader, device, num_classes, scaler=None):
     print("Averaged stats:", metric_logger)
     
     all_preds, all_labels = np.vstack(all_preds), np.vstack(all_labels)
+    # remove the 255 ground truth label
+    all_preds, all_labels = all_preds[all_labels != 255], all_labels[all_labels != 255]
     # Check which label is missing in all_preds
     missing_labels = [i for i in range(num_classes) if i not in all_labels]
     if len(missing_labels) > 0:
@@ -119,6 +121,8 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, lr_scheduler, 
     print("Averaged stats:", metric_logger)
     
     all_preds, all_labels = np.vstack(all_preds), np.vstack(all_labels)
+    # remove the 255 ground truth label
+    all_preds, all_labels = all_preds[all_labels != 255], all_labels[all_labels != 255]
     confusion_matrix_total = confusion_matrix(all_labels, all_preds)
     classes = ["Road", "Vegetation", "Painted Metal", "Sky", "Concrete/Stone/Brick", "Water", "Unpainted Metal", "Glass/Transparent Plastic"]
     # classes = ["Sky", "Background"]

@@ -159,7 +159,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description=__doc__)
 
-    parser.add_argument('--data_path', default='/data2/chaoyi/HSI_Dataset/V2/train/', help='dataset')
+    parser.add_argument('--data_path', default='/data2/chaoyi/HSI_Dataset/HSI Drive/Image_dataset/', help='dataset')
     parser.add_argument('--img_type', default='OSP', help='image type: OSP or ALL or rgb')
     parser.add_argument('--name', default='', help='renames results.txt to results_name.txt if supplied')
     
@@ -171,7 +171,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--num-classes', default=8, type=int, help='num_classes')
 
-    parser.add_argument('-b', '--batch-size', default=4, type=int,
+    parser.add_argument('-b', '--batch-size', default=8, type=int,
                         help='images per gpu, the total batch size is $NGPU x batch_size')
 
     parser.add_argument('--start_epoch', default=0, type=int, help='start epoch')
