@@ -196,7 +196,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--print-freq', default=20, type=int, help='print frequency')
 
-    parser.add_argument('--output-dir', default='./Pixel_MLP/HSI_drive/OSP', help='path where to save')
+    parser.add_argument('--output-dir', default='./Pixel_MLP/multi_train/HSI_drive/OSP', help='path where to save')
 
     parser.add_argument('--resume', default='./Pixel_MLP/multi_train/OSP/model_030', help='resume from checkpoint')
 
