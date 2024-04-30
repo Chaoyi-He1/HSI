@@ -171,7 +171,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--num-classes', default=7, type=int, help='num_classes')
 
-    parser.add_argument('-b', '--batch-size', default=8, type=int,
+    parser.add_argument('-b', '--batch-size', default=2, type=int,
                         help='images per gpu, the total batch size is $NGPU x batch_size')
 
     parser.add_argument('--start_epoch', default=0, type=int, help='start epoch')
@@ -187,7 +187,7 @@ if __name__ == "__main__":
     parser.add_argument('--lr', default=0.0001, type=float,
                         help='initial learning rate')
 
-    parser.add_argument('--momentum', default=0.4, type=float, metavar='M',
+    parser.add_argument('--momentum', default=0.8, type=float, metavar='M',
                         help='momentum') 
 
     parser.add_argument('--wd', '--weight-decay', default=0, type=float,

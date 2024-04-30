@@ -433,6 +433,7 @@ class HSI_Drive(data.Dataset):
         self.selected_labels = [1, 3, 4, 5, 6, 9, 10]
         
     def relabeling(self, label):
+        label[label == 0] = 255
         for k, v in self.hsi_drive_original_label.items():
             if k not in self.selected_labels:
                 label[label == k] = 255
@@ -469,7 +470,7 @@ class HSI_Drive(data.Dataset):
     def collate_fn(batch):
         images, targets, img_pos = list(zip(*batch))
         batched_imgs = torch.stack(images, dim=0).flatten(0, 1)
-        batched_targets = torch.stack(targets, dim=0).flatten(0, 1).to(dtype=torch.long)
+        batched_targets = torch.stack(targets, dim=0).flatten(0, 1).to(dtype=torch.int64)
         batched_img_pos = np.vstack(img_pos)
         # print max and min of label ignoring 255
         # print(f"Max label: {torch.max(batched_targets[batched_targets != 255])}, Min label: {torch.min(batched_targets[batched_targets != 255])}")
