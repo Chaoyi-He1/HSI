@@ -8,7 +8,7 @@ from typing import Iterable
 
 def custom_loss(output, target, model, lambda1, lambda2, is_train=True):
     if is_train:
-        basic_loss = [F.cross_entropy(output[i], target.squeeze(1)) for i in range(len(output))]
+        basic_loss = F.cross_entropy(output, target.squeeze(-1))
         basic_loss_sum = sum(basic_loss)
     else:
         basic_loss = F.cross_entropy(output, target.squeeze(1))

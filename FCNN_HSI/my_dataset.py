@@ -4,6 +4,8 @@ import torch.utils.data as data
 from PIL import Image
 import numpy as np
 import torch
+from torch.utils.data import Subset
+from collections import defaultdict
 
 
 def cat_list(images, fill_value=0):
@@ -343,4 +345,133 @@ class HSI_Transformer_all(data.Dataset):
         batched_imgs = torch.stack(images, dim=0)
         batched_targets = torch.stack(targets, dim=0).to(dtype=torch.long)
         return batched_imgs, batched_targets
+
+
+class HSI_Drive(data.Dataset):
+    def __init__(self, data_path: str = "", use_MF: bool = True, use_dual: bool = True,
+                 use_OSP: bool = True, transforms=None):
+        self.use_MF = use_MF
+        self.use_dual = use_dual
+        self.use_OSP = use_OSP
+        
+        self.transforms = transforms
+        
+        self.data_folder_path = os.path.join(data_path, "cubes_fl32")
+        self.data_folder_path = os.path.join(self.data_folder_path, "MF") if use_MF else self.data_folder_path
+        self.data_folder_path = os.path.join(self.data_folder_path, "Dual_HVI") if use_dual else os.path.join(self.data_folder_path, "Sin_HVI")
+        
+        path_ext = ""
+        if use_MF:
+            path_ext += "/MF"
+        if use_dual:
+            path_ext += "/Dual_HVI"
+        elif not use_dual:
+            path_ext += "/Sin_HVI"
+        
+        name_ext = "_MF_TC" if use_MF else "_TC"
+        
+        self.data_paths = [os.path.join(self.data_folder_path, file) for file in os.listdir(self.data_folder_path) if file.endswith(".mat")]
+        self.label_paths = [file.replace("cubes_fl32", "labels").replace(path_ext, "").replace(name_ext, "").replace(".mat", ".png") for file in self.data_paths]
+        
+        for i in range(len(self.data_paths) - 1, -1, -1):
+            if not os.path.isfile(self.label_paths[i]):
+                del self.data_paths[i]
+                del self.label_paths[i]
+        
+        assert len(self.data_paths) == len(self.label_paths) and len(self.data_paths) > 0, "The number of data files and label files are not equal."
+
+        self.hsi_drive_original_label = {
+            1: "Road",
+            2: "Road marks",
+            3: "Vegetation",
+            4: "Painted Metal",
+            5: "Sky",
+            6: "Concrete/Stone/Brick",
+            7: "Pedestrian/Cyclist",
+            8: "Water",
+            9: "Unpainted Metal",
+            10: "Glass/Transparent Plastic",
+        }
+        self.selected_labels = [3, 4, 5, 6, 9, 10]
+        
+    def relabeling(self, label):
+        for k, v in self.hsi_drive_original_label.items():
+            if k not in self.selected_labels:
+                label[label == k] = 255
+        # relabel the label from 0 to end, with 255 as the background
+        for i, k in enumerate(self.selected_labels):
+            label[label == k] = i + 1
+        return label
+        
     
+    def __getitem__(self, index):
+        img = sio.loadmat(self.data_paths[index])["filtered_img"]
+        label = np.array(Image.open(self.label_paths[index]))
+        label = self.relabeling(label)
+        img_pos = np.indices(img.shape[:2]).transpose(1, 2, 0)
+        
+        if self.use_OSP and not self.use_dual:
+            img = img[:, :, [60, 44, 17, 27, 53, 4, 1, 20, 71, 13]]
+        elif self.use_OSP and self.use_dual:
+            img = img[:, :, [42, 34, 16, 230, 95, 243, 218, 181, 11, 193]]
+        
+        img = torch.from_numpy(img).to(dtype=torch.float32).permute(2, 0, 1)
+        label = torch.from_numpy(label).to(dtype=torch.int64)
+        img_pos = torch.from_numpy(img_pos).permute(2, 0, 1)
+        
+        if self.transforms is not None:
+            img, label, img_pos = self.transforms(img, label, img_pos)
+        
+        img_pos = img_pos.permute(1, 2, 0).numpy()
+
+        return img, label, img_pos
+    
+    def __len__(self):
+        return len(self.data_paths)
+    
+    @staticmethod
+    def collate_fn(batch):
+        images, targets, img_pos = list(zip(*batch))
+        batched_imgs = torch.stack(images, dim=0)
+        batched_targets = torch.stack(targets, dim=0)
+        batched_img_pos = np.stack(img_pos, axis=0)
+        # print max and min of label ignoring 255
+        # print(f"Max label: {torch.max(batched_targets[batched_targets != 255])}, Min label: {torch.min(batched_targets[batched_targets != 255])}")
+        return batched_imgs, batched_targets, batched_img_pos
+
+
+def stratified_split(dataset, train_ratio=0.8):
+    # split the dataset into train and validation set, the dataset is for pixel-wise classification
+    # the label of each img is in shape (H*W, 1), as a tensor, so we need to split the dataset based on the label
+    # make sure the train and validation all have the same distribution of the label
+
+    label_dict = defaultdict(list)
+    for i in range(len(dataset)):
+        _, target, _ = dataset[i]
+        label_dict[tuple(target.unique().tolist())].append(i)
+        
+    train_indices, train_labels = [], []
+    val_indices, val_labels = [], []
+    for labels, indices in label_dict.items():
+        np.random.shuffle(indices)
+        split = int(np.floor(train_ratio * len(indices)))
+        
+        train_indices.extend(indices[:split])
+        val_indices.extend(indices[split:])
+        
+        #change labels tuple to list
+        labels = list(labels)
+        if indices[:split] is not None:
+            train_labels.extend(labels)
+        if indices[split:] is not None:
+            val_labels.extend(labels)
+    
+    #check unique labels in train and val
+    train_labels = set(train_labels)
+    val_labels = set(val_labels)
+    print(f"Unique labels in train: {train_labels}, Unique labels in val: {val_labels}")
+    
+    train_dataset = Subset(dataset, train_indices)
+    val_dataset = Subset(dataset, val_indices)
+    return train_dataset, val_dataset
+        

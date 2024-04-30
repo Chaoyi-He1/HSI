@@ -10,18 +10,10 @@ class Compose(object):
     def __init__(self, transforms):
         self.transforms = transforms
 
-    def __call__(self, image, target=None):
+    def __call__(self, image, target, img_pos):
         for t in self.transforms:
-            image, target = t(image, target)
+            image, target = t(image, target, img_pos)
 
-        return image, target
-
-
-class ToTensor(object):
-    def __call__(self, image, target):
-        image = F.to_tensor(image)
-        target = torch.as_tensor(np.array(target), dtype=torch.int64)
-        target = target.unsqueeze(0) if len(target.shape) != 3 else target
         return image, target
 
 
@@ -29,21 +21,12 @@ class RandomHorizontalFlip(object):
     def __init__(self, prob):
         self.flip_prob = prob
 
-    def __call__(self, image, target):
+    def __call__(self, image, target, img_pos):
         if random.random() < self.flip_prob:
             image = F.hflip(image)
             target = F.hflip(target)
-        return image, target
-
-
-class Normalize(object):
-    def __init__(self, mean, std):
-        self.mean = mean
-        self.std = std
-
-    def __call__(self, image, target):
-        image = F.normalize(image, mean=self.mean, std=self.std)
-        return image, target
+            img_pos = F.hflip(img_pos)
+        return image, target, img_pos
 
 
 class Resize(object):
@@ -51,12 +34,13 @@ class Resize(object):
         self.size = size  # [h, w]
         self.resize_mask = resize_mask
 
-    def __call__(self, image, target=None):
+    def __call__(self, image, target, img_pos):
         image = F.resize(image, self.size)
         if self.resize_mask is True:
             target = F.resize(target, self.size)
+        img_pos = F.resize(img_pos, self.size)
 
-        return image, target
+        return image, target, img_pos
 
 
 class RandomCrop(object):
@@ -73,10 +57,12 @@ class RandomCrop(object):
             img = F.pad(img, [0, 0, padw, padh], fill=fill)
         return img
 
-    def __call__(self, image, target):
+    def __call__(self, image, target, img_pos):
         image = self.pad_if_smaller(image)
         target = self.pad_if_smaller(target)
+        img_pos = self.pad_if_smaller(img_pos, fill=-1)
         crop_params = T.RandomCrop.get_params(image, (self.size, self.size))
         image = F.crop(image, *crop_params)
         target = F.crop(target, *crop_params)
-        return image, target
+        img_pos = F.crop(img_pos, *crop_params)
+        return image, target, img_pos

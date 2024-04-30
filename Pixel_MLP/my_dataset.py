@@ -430,16 +430,15 @@ class HSI_Drive(data.Dataset):
             9: "Unpainted Metal",
             10: "Glass/Transparent Plastic",
         }
-        self.selected_labels = [3, 4, 5, 6, 9, 10]
+        self.selected_labels = [1, 3, 4, 5, 6, 9, 10]
         
     def relabeling(self, label):
-        label[label == 0] = 255
         for k, v in self.hsi_drive_original_label.items():
             if k not in self.selected_labels:
                 label[label == k] = 255
         # relabel the label from 0 to end, with 255 as the background
         for i, k in enumerate(self.selected_labels):
-            label[label == k] = i
+            label[label == k] = i + 1
         return label
         
     

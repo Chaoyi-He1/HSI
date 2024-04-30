@@ -160,16 +160,16 @@ if __name__ == "__main__":
         description=__doc__)
 
     parser.add_argument('--data_path', default='/data2/chaoyi/HSI_Dataset/HSI Drive/Image_dataset/', help='dataset')
-    parser.add_argument('--img_type', default='OSP', help='image type: OSP or ALL or rgb')
+    parser.add_argument('--img_type', default='ALL', help='image type: OSP or ALL or rgb')
     parser.add_argument('--name', default='', help='renames results.txt to results_name.txt if supplied')
     
     parser.add_argument('--use_MF', default=True, type=bool, help='use MF')
     parser.add_argument('--use_dual', default=True, type=bool, help='use dual')
-    parser.add_argument('--use_OSP', default=True, type=bool, help='use OSP')
+    parser.add_argument('--use_OSP', default=False, type=bool, help='use OSP')
 
     parser.add_argument('--device', default='cuda', help='device')
 
-    parser.add_argument('--num-classes', default=6, type=int, help='num_classes')
+    parser.add_argument('--num-classes', default=8, type=int, help='num_classes')
 
     parser.add_argument('-b', '--batch-size', default=2, type=int,
                         help='images per gpu, the total batch size is $NGPU x batch_size')
