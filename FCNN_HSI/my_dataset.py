@@ -4,8 +4,6 @@ import torch.utils.data as data
 from PIL import Image
 import numpy as np
 import torch
-from torch.utils.data import Subset
-from collections import defaultdict
 
 
 def cat_list(images, fill_value=0):
@@ -178,7 +176,6 @@ class HSI_Transformer(data.Dataset):
             if self.img_type != "rgb" else np.array(Image.open(self.img_files[index])).astype(np.float16)
         img = img[pixel_index, :]
         img = img[: img.shape[0] // self.sequence_length * self.sequence_length, :]
-        
         # check if img is empty
         if img.shape[0] == 0:
             return self.__getitem__(np.random.randint(0, len(self.img_files)))
@@ -204,17 +201,12 @@ class HSI_Transformer(data.Dataset):
         images, targets = list(zip(*batch))
         batched_imgs = torch.stack(images, dim=0).flatten(0, 1)
         batched_targets = torch.stack(targets, dim=0).flatten(0, 1)
-        # if batched_imgs.shape[0] > 50000, randomly select 50000 samples
-        if batched_imgs.shape[0] > 50000:
-            index = np.random.choice(batched_imgs.shape[0], 50000, replace=False)
-            batched_imgs = batched_imgs[index]
-            batched_targets = batched_targets[index]
         return batched_imgs, batched_targets
 
 
 class HSI_Transformer_all(data.Dataset):
     def __init__(self, data_path: str = "", label_type: str = "gray", img_type: str = "OSP", 
-                 sequence_length: int = 10):
+                 transform=None):
         """
         Parameters:
             data_path: the path of the "HSI Dataset folder"
@@ -227,7 +219,7 @@ class HSI_Transformer_all(data.Dataset):
         self.img_folder_list = os.listdir(data_path)
         self.img_type = img_type
         self.label_type = label_type
-        self.sequence_length = sequence_length
+        self.transforms = transform
 
         if img_type != 'rgb':
             self.img_files = [os.path.join(data_path, img_folder, file)
@@ -242,12 +234,7 @@ class HSI_Transformer_all(data.Dataset):
             
         self.img_files.sort()
         rgb = "rgb" if img_type == 'rgb' else ''
-        if img_type == "ALL":
-            channel = "_ALL71channel" 
-        elif img_type == "OSP":
-            channel = "_OSP10channel"
-        else:
-            channel = "_RAW"
+        channel = "_ALL71channel" if img_type == 'ALL' else "_OSP10channel"
         self.mask_files = [[img.replace(img.split(os.sep)[-1],
                                        os.path.splitext(
                                            os.path.basename(img))[0].replace(channel, "").replace(rgb, "")
@@ -267,11 +254,7 @@ class HSI_Transformer_all(data.Dataset):
                             img.replace(img.split(os.sep)[-1],
                                        os.path.splitext(
                                            os.path.basename(img))[0].replace(channel, "").replace(rgb, "")
-                                       + "_" + "Treelabel" + '.mat'),
-                            img.replace(img.split(os.sep)[-1],
-                                       os.path.splitext(
-                                           os.path.basename(img))[0].replace(channel, "").replace(rgb, "")
-                                       + "_" + "Skylabel" + '.mat'),] for img in self.img_files]
+                                       + "_" + "Treelabel" + '.mat'),] for img in self.img_files]
         rgb = "rgb" if img_type != 'rgb' else ''
         self.label_mask = [img.replace(img.split(os.sep)[-1], rgb
                                        + os.path.splitext(os.path.basename(img))[0].replace(channel, "")
@@ -288,7 +271,7 @@ class HSI_Transformer_all(data.Dataset):
             "pole": 5,
             "traffic light": 6,
             "traffic sign": 7,
-            "tree": 8,
+            "vegetation": 8,
             "terrain": 9,
             "sky": 10,
             "person": 11,
@@ -307,7 +290,6 @@ class HSI_Transformer_all(data.Dataset):
             "Building_Glass_label": 2,
             "Car_white_label": 3,
             "Treelabel": 4,
-            "sky": 5,
         }
     
     def sanity_check(self):
@@ -327,13 +309,7 @@ class HSI_Transformer_all(data.Dataset):
             if os.path.isfile(self.mask_files[index][i]):
                 endmember_label[sio.loadmat(self.mask_files[index][i])["overlay"].astype(bool)] = self.endmember_label[k]
         
-        img_labels = np.array(Image.open(self.label_mask[index]))
-        pixel_index = np.zeros((img_h, img_w), dtype=bool)
-        for i, k in enumerate(self.label_mapping.keys()):
-            if any(k.lower() in key.lower() for key in self.endmember_label.keys()):
-                pixel_index = np.logical_or(pixel_index, img_labels == self.label_mapping[k])
-        
-        return endmember_label, pixel_index
+        return endmember_label
 
     def __getitem__(self, index):
         """
@@ -345,170 +321,26 @@ class HSI_Transformer_all(data.Dataset):
         
         img = sio.loadmat(self.img_files[index])["filtered_img"].astype(np.float16) \
             if self.img_type != "rgb" else np.array(Image.open(self.img_files[index])).astype(np.float16)
-        img_pos = np.indices(img.shape[:2]).transpose(1, 2, 0)
 
-        endmember_label, pixel_index = self.creat_endmember_label(index, img)
+        endmember_label = self.creat_endmember_label(index, img)
         # Check if endmember_label only contains "5", if so, raise an error
         if np.unique(endmember_label).shape[0] == 1 and np.unique(endmember_label)[0] == len(self.endmember_label):
             return self.__getitem__(np.random.randint(0, len(self.img_files)))
-        
-        img = img[pixel_index, :]
-        img_pos = img_pos[pixel_index, :]
-        # only select the [6, 44, 11, 70, 3, 56, 35, 50, 49, 67, 47, 22] channels
-        # img = img[:, [6, 44, 11, 70, 3, 56, 35, 50, 49, 67, 47, 22]]
-        
-        if img.shape[0] == 0:
-            return self.__getitem__(np.random.randint(0, len(self.img_files)))
-        img = img[:img.shape[0] // self.sequence_length * self.sequence_length, :]
-        img_pos = img_pos[:img_pos.shape[0] // self.sequence_length * self.sequence_length, :]
-        endmember_label = endmember_label[pixel_index]
-        endmember_label = endmember_label[:endmember_label.shape[0] // self.sequence_length * self.sequence_length]
            
-        img = torch.from_numpy(img).view(-1, self.sequence_length, img.shape[1]).contiguous()
-        img_pos = np.reshape(img_pos, (-1, self.sequence_length, 2))
-        target = torch.from_numpy(endmember_label).view(-1, self.sequence_length).contiguous()
+        # img = torch.from_numpy(img)
+        # target = torch.from_numpy(endmember_label)
+        if self.transforms is not None:
+            img, target = self.transforms(img, endmember_label)
         
-        return img, target, img_pos
+        return img, target
 
     def __len__(self):
         return len(self.img_files)
 
     @staticmethod
     def collate_fn(batch):
-        images, targets, img_pos = list(zip(*batch))
-        batched_imgs = torch.stack(images, dim=0).flatten(0, 1)
-        batched_targets = torch.stack(targets, dim=0).flatten(0, 1).to(dtype=torch.long)
-        batched_img_pos = np.vstack(img_pos, axis=0)
-        if batched_imgs.shape[0] > 50000:
-            index = np.random.choice(batched_imgs.shape[0], 50000, replace=False)
-            batched_imgs = batched_imgs[index]
-            batched_targets = batched_targets[index]
-            batched_img_pos = batched_img_pos[index]
-        return batched_imgs, batched_targets, batched_img_pos
+        images, targets = list(zip(*batch))
+        batched_imgs = torch.stack(images, dim=0)
+        batched_targets = torch.stack(targets, dim=0).to(dtype=torch.long)
+        return batched_imgs, batched_targets
     
-    
-class HSI_Drive(data.Dataset):
-    def __init__(self, data_path: str = "", use_MF: bool = True, use_dual: bool = True,
-                 use_OSP: bool = True):
-        self.use_MF = use_MF
-        self.use_dual = use_dual
-        self.use_OSP = use_OSP
-        
-        self.data_folder_path = os.path.join(data_path, "cubes_fl32")
-        self.data_folder_path = os.path.join(self.data_folder_path, "MF") if use_MF else self.data_folder_path
-        self.data_folder_path = os.path.join(self.data_folder_path, "Dual_HVI") if use_dual else os.path.join(self.data_folder_path, "Sin_HVI")
-        
-        path_ext = ""
-        if use_MF:
-            path_ext += "/MF"
-        if use_dual:
-            path_ext += "/Dual_HVI"
-        elif not use_dual:
-            path_ext += "/Sin_HVI"
-        
-        name_ext = "_MF_TC" if use_MF else "_TC"
-        
-        self.data_paths = [os.path.join(self.data_folder_path, file) for file in os.listdir(self.data_folder_path) if file.endswith(".mat")]
-        self.label_paths = [file.replace("cubes_fl32", "labels").replace(path_ext, "").replace(name_ext, "").replace(".mat", ".png") for file in self.data_paths]
-        
-        for i in range(len(self.data_paths) - 1, -1, -1):
-            if not os.path.isfile(self.label_paths[i]):
-                del self.data_paths[i]
-                del self.label_paths[i]
-        
-        assert len(self.data_paths) == len(self.label_paths) and len(self.data_paths) > 0, "The number of data files and label files are not equal."
-
-        self.hsi_drive_original_label = {
-            1: "Road",
-            2: "Road marks",
-            3: "Vegetation",
-            4: "Painted Metal",
-            5: "Sky",
-            6: "Concrete/Stone/Brick",
-            7: "Pedestrian/Cyclist",
-            8: "Water",
-            9: "Unpainted Metal",
-            10: "Glass/Transparent Plastic",
-        }
-        self.selected_labels = [3, 4, 5, 6, 9, 10]
-        
-    def relabeling(self, label):
-        label[label == 0] = 255
-        for k, v in self.hsi_drive_original_label.items():
-            if k not in self.selected_labels:
-                label[label == k] = 255
-        # relabel the label from 0 to end, with 255 as the background
-        for i, k in enumerate(self.selected_labels):
-            label[label == k] = i
-        return label
-        
-    
-    def __getitem__(self, index):
-        img = sio.loadmat(self.data_paths[index])["filtered_img"]
-        label = np.array(Image.open(self.label_paths[index]))
-        label = self.relabeling(label)
-        img_pos = np.indices(img.shape[:2]).transpose(1, 2, 0)
-        
-        img = img.reshape(-1, img.shape[-1])
-        img_pos = img_pos.reshape(-1, 2)
-        label = label.reshape(-1)
-        
-        if self.use_OSP and not self.use_dual:
-            img = img[:, [60, 44, 17, 27, 53, 4, 1, 20, 71, 13]]
-        elif self.use_OSP and self.use_dual:
-            img = img[:, [42, 34, 16, 230, 95, 243, 218, 181, 11, 193]]
-        
-        img = torch.from_numpy(img).to(dtype=torch.float32)
-        label = torch.from_numpy(label).to(dtype=int)
-
-        return img, label, img_pos
-    
-    def __len__(self):
-        return len(self.data_paths)
-    
-    @staticmethod
-    def collate_fn(batch):
-        images, targets, img_pos = list(zip(*batch))
-        batched_imgs = torch.stack(images, dim=0).flatten(0, 1)
-        batched_targets = torch.stack(targets, dim=0).flatten(0, 1).to(dtype=torch.int64)
-        batched_img_pos = np.vstack(img_pos)
-        # print max and min of label ignoring 255
-        # print(f"Max label: {torch.max(batched_targets[batched_targets != 255])}, Min label: {torch.min(batched_targets[batched_targets != 255])}")
-        return batched_imgs, batched_targets, batched_img_pos
-
-
-def stratified_split(dataset, train_ratio=0.8):
-    # split the dataset into train and validation set, the dataset is for pixel-wise classification
-    # the label of each img is in shape (H*W, 1), as a tensor, so we need to split the dataset based on the label
-    # make sure the train and validation all have the same distribution of the label
-
-    label_dict = defaultdict(list)
-    for i in range(len(dataset)):
-        _, target, _ = dataset[i]
-        label_dict[tuple(target.unique().tolist())].append(i)
-        
-    train_indices, train_labels = [], []
-    val_indices, val_labels = [], []
-    for labels, indices in label_dict.items():
-        np.random.shuffle(indices)
-        split = int(np.floor(train_ratio * len(indices)))
-        
-        train_indices.extend(indices[:split])
-        val_indices.extend(indices[split:])
-        
-        #change labels tuple to list
-        labels = list(labels)
-        if indices[:split] is not None:
-            train_labels.extend(labels)
-        if indices[split:] is not None:
-            val_labels.extend(labels)
-    
-    #check unique labels in train and val
-    train_labels = set(train_labels)
-    val_labels = set(val_labels)
-    print(f"Unique labels in train: {train_labels}, Unique labels in val: {val_labels}")
-    
-    train_dataset = Subset(dataset, train_indices)
-    val_dataset = Subset(dataset, val_indices)
-    return train_dataset, val_dataset
-        
