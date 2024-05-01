@@ -93,7 +93,7 @@ def train_one_epoch(model: nn.Module,
     # remove the 255 ground truth label
     all_preds, all_labels = all_preds[all_labels != 255], all_labels[all_labels != 255]
     confusion_matrix_total = confusion_matrix(all_labels, all_preds)
-    classes = ["Unlabeled", "Road", "Vegetation", "Painted Metal", "Sky", "Concrete/Stone/Brick", "Unpainted Metal", "Glass/Transparent Plastic"]
+    classes = ["Unlabeled", "Road", "Road marks", "Painted Metal", "Pedestrian/Cyclist"]
     # classes = ["Sky", "Background"]
     df_cm = pd.DataFrame(confusion_matrix_total / \
                             (np.sum(confusion_matrix_total, axis=1)[:, None] + \
@@ -126,10 +126,10 @@ def evaluate(model: nn.Module,
             output = model(images)
             
             _, accuracy = custom_loss(output, targets, model, 0.1, 0.1, False)
-            basic_loss = F.cross_entropy(output, targets)
+            basic_loss = F.cross_entropy(output, targets, ignore_index=255)
             
             # store the predictions and labels
-            all_preds.append(output.argmax(1).view(-1, 1).cpu().numpy().astype(int))
+            all_preds.append(output.argmax(1).view(-1, 1).cpu().numpy())
             all_labels.append(targets.view(-1, 1).cpu().numpy())
 
             metric_logger.update(loss=basic_loss.item())
@@ -148,7 +148,7 @@ def evaluate(model: nn.Module,
     if len(missing_labels) > 0:
         print(f"Missing labels: {missing_labels}")
     confusion_matrix_total = confusion_matrix(all_labels, all_preds)
-    classes = ["Unlabeled", "Road", "Vegetation", "Painted Metal", "Sky", "Concrete/Stone/Brick", "Unpainted Metal", "Glass/Transparent Plastic"]
+    classes = ["Unlabeled", "Road", "Road marks", "Painted Metal", "Pedestrian/Cyclist"]
     # classes = ["Sky", "Background"]
     df_cm = pd.DataFrame(confusion_matrix_total / \
                             (np.sum(confusion_matrix_total, axis=1)[:, None] + \

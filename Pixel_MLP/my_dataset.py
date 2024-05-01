@@ -389,21 +389,27 @@ class HSI_Transformer_all(data.Dataset):
     
 class HSI_Drive(data.Dataset):
     def __init__(self, data_path: str = "", use_MF: bool = True, use_dual: bool = True,
-                 use_OSP: bool = True):
+                 use_OSP: bool = True, use_raw: bool = False, use_cache: bool = False):
         self.use_MF = use_MF
         self.use_dual = use_dual
         self.use_OSP = use_OSP
+        self.use_raw = use_raw
+        self.use_cache = use_cache
         
         self.data_folder_path = os.path.join(data_path, "cubes_fl32")
         self.data_folder_path = os.path.join(self.data_folder_path, "MF") if use_MF else self.data_folder_path
-        self.data_folder_path = os.path.join(self.data_folder_path, "Dual_HVI") if use_dual else os.path.join(self.data_folder_path, "Sin_HVI")
+        if not use_raw:
+            self.data_folder_path = os.path.join(self.data_folder_path, "Dual_HVI") if use_dual else os.path.join(self.data_folder_path, "Sin_HVI")
         
         path_ext = ""
         if use_MF:
             path_ext += "/MF"
-        if use_dual:
+        
+        if use_raw:
+            path_ext += ""
+        elif use_dual and not use_raw:
             path_ext += "/Dual_HVI"
-        elif not use_dual:
+        elif not use_dual and not use_raw:
             path_ext += "/Sin_HVI"
         
         name_ext = "_MF_TC" if use_MF else "_TC"
@@ -430,7 +436,9 @@ class HSI_Drive(data.Dataset):
             9: "Unpainted Metal",
             10: "Glass/Transparent Plastic",
         }
-        self.selected_labels = [1, 3, 4, 5, 6, 9, 10]
+        self.selected_labels = [1, 2, 4, 7]
+        if use_cache:
+            self.cache_data()
         
     def relabeling(self, label):
         for k, v in self.hsi_drive_original_label.items():
@@ -440,37 +448,73 @@ class HSI_Drive(data.Dataset):
         for i, k in enumerate(self.selected_labels):
             label[label == k] = i + 1
         return label
+    
+    def cache_data(self):
+        self.data_dict = defaultdict(list)
+        for i in range(len(self.data_paths)):
+            img = sio.loadmat(self.data_paths[i])["filtered_img"] if not self.use_raw else sio.loadmat(self.data_paths[i])["cube"]
+            img = img.transpose(1, 2, 0) if self.use_raw else img
+            label = np.array(Image.open(self.label_paths[i]))
+            label = self.relabeling(label)
+            
+            img = img.reshape(-1, img.shape[-1])
+            label = label.reshape(-1)
+            
+            if self.use_OSP and not self.use_dual:
+                img = img[:, [60, 44, 17, 27, 53, 4, 1, 20, 71, 13]]
+            elif self.use_OSP and self.use_dual:
+                img = img[:, [42, 34, 16, 230, 95, 243, 218, 181, 11, 193]]
+            
+            for p in range(img.shape[0]):
+                self.data_dict[label[p]].append(img[p])
         
+        # randomly select 5000 samples from each class
+        for k, v in self.data_dict.items():
+            if len(v) > 50000:
+                self.data_dict[k] = v[np.random.choice(len(v), 50000, replace=False)]
+        
+        # generate the data and label lists based on the data_dict
+        self.data_list = []
+        self.label_list = []
+        for k, v in self.data_dict.items():
+            self.data_list.extend(v)
+            self.label_list.extend([k] * len(v))
     
     def __getitem__(self, index):
-        img = sio.loadmat(self.data_paths[index])["filtered_img"]
-        label = np.array(Image.open(self.label_paths[index]))
-        label = self.relabeling(label)
-        img_pos = np.indices(img.shape[:2]).transpose(1, 2, 0)
-        
-        img = img.reshape(-1, img.shape[-1])
-        img_pos = img_pos.reshape(-1, 2)
-        label = label.reshape(-1)
-        
-        if self.use_OSP and not self.use_dual:
-            img = img[:, [60, 44, 17, 27, 53, 4, 1, 20, 71, 13]]
-        elif self.use_OSP and self.use_dual:
-            img = img[:, [42, 34, 16, 230, 95, 243, 218, 181, 11, 193]]
-        
-        img = torch.from_numpy(img).to(dtype=torch.float32)
-        label = torch.from_numpy(label).to(dtype=int)
+        if not self.use_cache:
+            img = sio.loadmat(self.data_paths[index])["filtered_img"] if not self.use_raw else sio.loadmat(self.data_paths[index])["cube"]
+            img = img.transpose(1, 2, 0) if self.use_raw else img
+            label = np.array(Image.open(self.label_paths[index]))
+            label = self.relabeling(label)
+            img_pos = np.indices(img.shape[:2]).transpose(1, 2, 0)
+            
+            img = img.reshape(-1, img.shape[-1])
+            img_pos = img_pos.reshape(-1, 2)
+            label = label.reshape(-1)
+            
+            if self.use_OSP and not self.use_dual:
+                img = img[:, [60, 44, 17, 27, 53, 4, 1, 20, 71, 13]]
+            elif self.use_OSP and self.use_dual:
+                img = img[:, [42, 34, 16, 230, 95, 243, 218, 181, 11, 193]]
+            
+            img = torch.from_numpy(img).to(dtype=torch.float32)
+            label = torch.from_numpy(label).to(dtype=int)
+        elif self.use_cache:
+            img = torch.from_numpy(self.data_list[index]).to(dtype=torch.float16)
+            label = torch.tensor(self.label_list[index], dtype=torch.int64)
+            img_pos = None
 
         return img, label, img_pos
     
     def __len__(self):
-        return len(self.data_paths)
+        return len(self.data_paths) if not self.use_cache else len(self.data_list)
     
     @staticmethod
     def collate_fn(batch):
         images, targets, img_pos = list(zip(*batch))
         batched_imgs = torch.stack(images, dim=0).flatten(0, 1)
         batched_targets = torch.stack(targets, dim=0).flatten(0, 1).to(dtype=torch.int64)
-        batched_img_pos = np.vstack(img_pos)
+        batched_img_pos = np.vstack(img_pos) if img_pos[0] is not None else None
         # print max and min of label ignoring 255
         # print(f"Max label: {torch.max(batched_targets[batched_targets != 255])}, Min label: {torch.min(batched_targets[batched_targets != 255])}")
         return batched_imgs, batched_targets, batched_img_pos

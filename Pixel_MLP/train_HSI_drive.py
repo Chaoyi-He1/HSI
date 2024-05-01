@@ -36,7 +36,10 @@ def main(args):
                               use_MF=args.use_MF,
                               use_dual=args.use_dual,
                               use_OSP=args.use_OSP)
-    train_dataset, val_dataset = stratified_split(whole_dataset, train_ratio=0.8)
+    if not args.use_cache:
+        train_dataset, val_dataset = stratified_split(whole_dataset, train_ratio=0.8)
+    else:
+        train_dataset, val_dataset = random_split(whole_dataset, [int(0.8*len(whole_dataset)), len(whole_dataset)-int(0.8*len(whole_dataset))])
 
     
     if args.distributed:
@@ -166,6 +169,8 @@ if __name__ == "__main__":
     parser.add_argument('--use_MF', default=True, type=bool, help='use MF')
     parser.add_argument('--use_dual', default=True, type=bool, help='use dual')
     parser.add_argument('--use_OSP', default=False, type=bool, help='use OSP')
+    parser.add_argument('--use_raw', default=True, type=bool, help='use raw')
+    parser.add_argument('--use_cache', default=True, type=bool, help='use cache')
 
     parser.add_argument('--device', default='cuda', help='device')
 

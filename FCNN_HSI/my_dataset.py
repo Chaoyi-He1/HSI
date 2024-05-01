@@ -349,23 +349,28 @@ class HSI_Transformer_all(data.Dataset):
 
 class HSI_Drive(data.Dataset):
     def __init__(self, data_path: str = "", use_MF: bool = True, use_dual: bool = True,
-                 use_OSP: bool = True, transforms=None):
+                 use_OSP: bool = True, use_raw: bool = False, transforms=None):
         self.use_MF = use_MF
         self.use_dual = use_dual
         self.use_OSP = use_OSP
+        self.use_raw = use_raw
         
         self.transforms = transforms
         
         self.data_folder_path = os.path.join(data_path, "cubes_fl32")
         self.data_folder_path = os.path.join(self.data_folder_path, "MF") if use_MF else self.data_folder_path
-        self.data_folder_path = os.path.join(self.data_folder_path, "Dual_HVI") if use_dual else os.path.join(self.data_folder_path, "Sin_HVI")
+        if not use_raw:
+            self.data_folder_path = os.path.join(self.data_folder_path, "Dual_HVI") if use_dual else os.path.join(self.data_folder_path, "Sin_HVI")
         
         path_ext = ""
         if use_MF:
             path_ext += "/MF"
-        if use_dual:
+        
+        if use_raw:
+            path_ext += ""
+        elif use_dual and not use_raw:
             path_ext += "/Dual_HVI"
-        elif not use_dual:
+        elif not use_dual and not use_raw:
             path_ext += "/Sin_HVI"
         
         name_ext = "_MF_TC" if use_MF else "_TC"
@@ -392,7 +397,7 @@ class HSI_Drive(data.Dataset):
             9: "Unpainted Metal",
             10: "Glass/Transparent Plastic",
         }
-        self.selected_labels = [1, 3, 4, 5, 6, 9, 10]
+        self.selected_labels = [1, 2, 4, 7]
         
     def relabeling(self, label):
         for k, v in self.hsi_drive_original_label.items():
@@ -405,14 +410,15 @@ class HSI_Drive(data.Dataset):
         
     
     def __getitem__(self, index):
-        img = sio.loadmat(self.data_paths[index])["filtered_img"]
+        img = sio.loadmat(self.data_paths[index])["filtered_img"] if not self.use_raw else sio.loadmat(self.data_paths[index])["cube"]
+        img = img.transpose(1, 2, 0) if self.use_raw else img
         label = np.array(Image.open(self.label_paths[index]))
         label = self.relabeling(label)
         img_pos = np.indices(img.shape[:2]).transpose(1, 2, 0)
         
-        if self.use_OSP and not self.use_dual:
+        if self.use_OSP and not self.use_dual and not self.use_raw:
             img = img[:, :, [60, 44, 17, 27, 53, 4, 1, 20, 71, 13]]
-        elif self.use_OSP and self.use_dual:
+        elif self.use_OSP and self.use_dual and not self.use_raw:
             img = img[:, :, [42, 34, 16, 230, 95, 243, 218, 181, 11, 193]]
         
         img = torch.from_numpy(img).to(dtype=torch.float32).permute(2, 0, 1)

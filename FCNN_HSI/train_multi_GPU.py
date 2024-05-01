@@ -77,7 +77,8 @@ def main(args):
     whole_dataset = HSI_Drive(data_path=args.data_path,
                               use_MF=args.use_MF,
                               use_dual=args.use_dual,
-                              use_OSP=args.use_OSP)
+                              use_OSP=args.use_OSP,
+                              use_raw=args.use_raw,)
     train_dataset, val_dataset = stratified_split(whole_dataset, train_ratio=0.8)
     
     if args.distributed:
@@ -103,10 +104,12 @@ def main(args):
         in_chans = 3
     elif args.use_OSP:
         in_chans = 10
-    elif not args.use_OSP and args.use_dual:
+    elif not args.use_OSP and args.use_dual and not args.use_raw:
         in_chans = 252
-    elif not args.use_OSP and not args.use_dual:
+    elif not args.use_OSP and not args.use_dual and not args.use_raw:
         in_chans = 71
+    elif args.use_raw:
+        in_chans = 25
         
     # create model num_classes equal background + 20 classes
     model = create_model(in_chans=in_chans, num_classes=num_classes)
@@ -170,12 +173,15 @@ def main(args):
         if args.rank in [-1, 0]:
             if tb_writer:
                 tags = ['train_loss', 'train_acc', 'val_loss', 'val_acc', 
-                        'IoU/unlabeled', 'IoU/Road', 'IoU/Vegetation', 'IoU/Painted Metal',
-                        'IoU/Sky', 'IoU/Concrete_Stone_Brick', 'IoU/Unpainted Metal', 'IoU/Glass_Transparent Plastic'
+                        'IoU/unlabeled', 'IoU/Road', 'IoU/Road marks', 'IoU/Painted Metal',
+                        'IoU/Pedestrian or Cyclist',
                         'mean_IoU']
                 values = [mean_loss, mean_acc, loss_val, acc_val] + [i for i in (iu * 100).tolist()] + [iu.mean().item() * 100]
                 for x, tag in zip(values, tags):
                     tb_writer.add_scalar(tag, x, epoch)
+                # add confusion matrix to tensorboard
+                tb_writer.add_figure('confusion_matrix', confusion_mtx, epoch)
+                tb_writer.add_figure('confusion_matrix_val', confusion_mtx_val, epoch)
                     
             # write into txt
             with open(results_file, "a") as f:
@@ -215,13 +221,14 @@ if __name__ == "__main__":
     parser.add_argument('--img_type', default='ALL', help='image type: OSP or ALL or rgb')
     parser.add_argument('--name', default='', help='renames results.txt to results_name.txt if supplied')
     
-    parser.add_argument('--use_MF', default=True, type=bool, help='use MF')
+    parser.add_argument('--use_MF', default=False, type=bool, help='use MF')
     parser.add_argument('--use_dual', default=True, type=bool, help='use dual')
     parser.add_argument('--use_OSP', default=False, type=bool, help='use OSP')
+    parser.add_argument('--use_raw', default=True, type=bool, help='use raw')
 
     parser.add_argument('--device', default='cuda', help='device')
 
-    parser.add_argument('--num-classes', default=8, type=int, help='num_classes')
+    parser.add_argument('--num-classes', default=5, type=int, help='num_classes')
     parser.add_argument('--lambda1', default=0.4, type=float, help='lambda1')
     parser.add_argument('--lambda2', default=0.8, type=float, help='lambda2')
 
