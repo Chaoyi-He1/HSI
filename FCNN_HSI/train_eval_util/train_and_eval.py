@@ -61,7 +61,7 @@ def train_one_epoch(model: nn.Module,
     header = 'Epoch: [{}]'.format(epoch)
     all_preds, all_labels = [], []
     
-    for image, target in metric_logger.log_every(data_loader, print_freq, header):
+    for image, target, _ in metric_logger.log_every(data_loader, print_freq, header):
         image, target = image.to(device), target.to(device)
         with torch.cuda.amp.autocast(enabled=scaler is not None):
             output = model(image)
@@ -121,15 +121,15 @@ def evaluate(model: nn.Module,
     all_preds, all_labels = [], []
     
     with torch.no_grad(), torch.cuda.amp.autocast(enabled=scaler is not None):
-        for images, targets in metric_logger.log_every(data_loader, 10, header):
+        for images, targets, _ in metric_logger.log_every(data_loader, 10, header):
             images, targets = images.to(device), targets.to(device)
             output = model(images)
             
             _, accuracy = custom_loss(output, targets, model, 0.1, 0.1, False)
-            basic_loss = F.cross_entropy(output, targets.squeeze(1))
+            basic_loss = F.cross_entropy(output, targets)
             
             # store the predictions and labels
-            all_preds.append(output.argmax(-1).view(-1, 1).cpu().numpy().astype(int))
+            all_preds.append(output.argmax(1).view(-1, 1).cpu().numpy().astype(int))
             all_labels.append(targets.view(-1, 1).cpu().numpy())
 
             metric_logger.update(loss=basic_loss.item())

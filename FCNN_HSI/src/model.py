@@ -27,7 +27,7 @@ class FCNN(nn.Module):
         self.model = nn.Sequential(
             ConvBNReLU(in_ch, in_ch, kernel_size=3),
             ConvBNReLU(in_ch, 300, kernel_size=3),
-            ConvBNReLU(300, num_classes, kernel_size=3),
+            nn.Conv2d(300, num_classes, kernel_size=3, padding=1),
         )
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:

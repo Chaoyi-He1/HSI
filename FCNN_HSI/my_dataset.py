@@ -392,7 +392,7 @@ class HSI_Drive(data.Dataset):
             9: "Unpainted Metal",
             10: "Glass/Transparent Plastic",
         }
-        self.selected_labels = [3, 4, 5, 6, 9, 10]
+        self.selected_labels = [1, 3, 4, 5, 6, 9, 10]
         
     def relabeling(self, label):
         for k, v in self.hsi_drive_original_label.items():
