@@ -64,7 +64,7 @@ def main(args):
     print(args)
     if args.rank in [-1, 0]:
         print('Start Tensorboard with "tensorboard --logdir=runs", view at http://localhost:6006/')
-        tb_writer = SummaryWriter(comment=os.path.join("runs", "HSI_drive", args.name))
+        tb_writer = SummaryWriter(log_dir="runs/HSI_drive/{}".format(datetime.datetime.now().strftime('%Y%m%d-%H%M%S')))
 
     device = torch.device(args.device)
 
@@ -90,12 +90,12 @@ def main(args):
     train_data_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=args.batch_size,
         sampler=train_sampler, num_workers=args.workers,
-        collate_fn=train_dataset.collate_fn, drop_last=True)
+        collate_fn=whole_dataset.collate_fn, drop_last=True)
 
     val_data_loader = torch.utils.data.DataLoader(
         val_dataset, batch_size=args.batch_size,
         sampler=test_sampler, num_workers=args.workers,
-        collate_fn=train_dataset.collate_fn)
+        collate_fn=whole_dataset.collate_fn)
 
     print("Creating model")
     
@@ -222,6 +222,8 @@ if __name__ == "__main__":
     parser.add_argument('--device', default='cuda', help='device')
 
     parser.add_argument('--num-classes', default=8, type=int, help='num_classes')
+    parser.add_argument('--lambda1', default=0.4, type=float, help='lambda1')
+    parser.add_argument('--lambda2', default=0.8, type=float, help='lambda2')
 
     parser.add_argument('-b', '--batch-size', default=2, type=int,
                         help='images per gpu, the total batch size is $NGPU x batch_size')
