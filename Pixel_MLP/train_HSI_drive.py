@@ -62,7 +62,7 @@ def main(args):
     elif args.img_type == "OSP":
         in_chans = 10
     elif args.img_type == "ALL" and args.use_dual:
-        in_chans = 250
+        in_chans = 252
     elif args.img_type == "ALL" and not args.use_dual:
         in_chans = 71
     model = create_model(num_classes=num_classes, in_chans=in_chans)

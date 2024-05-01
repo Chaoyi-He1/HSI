@@ -4,15 +4,16 @@ from torch.nn import functional as F
 import train_eval_util.distributed_utils as utils
 import torch.nn as nn
 from typing import Iterable
+import seaborn as sn
+import pandas as pd
+import numpy as np
+from sklearn.metrics import confusion_matrix
+import matplotlib.pyplot as plt
+
 
 
 def custom_loss(output, target, model, lambda1, lambda2, is_train=True):
-    if is_train:
-        basic_loss = F.cross_entropy(output, target.squeeze(-1))
-        basic_loss_sum = sum(basic_loss)
-    else:
-        basic_loss = F.cross_entropy(output, target.squeeze(1))
-        basic_loss_sum = basic_loss 
+    basic_loss = F.cross_entropy(output, target, ignore_index=255)
     
     # pre_conv_trainable = model.module.pre_process_conv.requires_grad
     # if pre_conv_trainable:
@@ -36,10 +37,9 @@ def custom_loss(output, target, model, lambda1, lambda2, is_train=True):
     #     basic_loss_sum = basic_loss_sum + l1_regularization + penalty
     
     # Calculate the accuracy of each pixel
-    accuracy = (output[0].argmax(1) == target.squeeze(1)).float().mean() if is_train \
-        else (output.argmax(1) == target.squeeze(1)).float().mean()
+    accuracy = (output.argmax(1) == target).float().mean()
     
-    return basic_loss_sum, accuracy
+    return basic_loss, accuracy
 
 
 def train_one_epoch(model: nn.Module,
@@ -51,20 +51,25 @@ def train_one_epoch(model: nn.Module,
                     print_freq: int = 10,
                     scaler=None,
                     lambda1: float = 0.1,
-                    lambda2: float = 0.1):
+                    lambda2: float = 0.1,
+                    num_classes: int = 8):
     model.train()
     metric_logger = utils.MetricLogger(delimiter="  ")
     metric_logger.add_meter('lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
     metric_logger.add_meter('loss', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
     metric_logger.add_meter('acc', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
     header = 'Epoch: [{}]'.format(epoch)
+    all_preds, all_labels = [], []
     
     for image, target in metric_logger.log_every(data_loader, print_freq, header):
         image, target = image.to(device), target.to(device)
         with torch.cuda.amp.autocast(enabled=scaler is not None):
             output = model(image)
             loss, accuracy = custom_loss(output, target, model, lambda1, lambda2)
-        
+
+            all_labels.append(target.view(-1, 1).cpu().numpy())
+            all_preds.append(output.argmax(1).view(-1, 1).cpu().numpy())
+            
             optimizer.zero_grad()
             if scaler is not None:
                 scaler.scale(loss).backward()
@@ -79,7 +84,27 @@ def train_one_epoch(model: nn.Module,
         metric_logger.update(lr=optimizer.param_groups[0]["lr"])
     
     metric_logger.synchronize_between_processes()
-    return metric_logger.meters["loss"].global_avg, metric_logger.meters["acc"].global_avg, optimizer.param_groups[0]["lr"]
+    print("Averaged stats:", metric_logger)
+    
+    all_preds, all_labels = np.vstack(all_preds), np.vstack(all_labels)
+    missing_labels = [i for i in range(num_classes) if i not in all_labels]
+    if len(missing_labels) > 0:
+        print(f"Missing labels: {missing_labels}")
+    # remove the 255 ground truth label
+    all_preds, all_labels = all_preds[all_labels != 255], all_labels[all_labels != 255]
+    confusion_matrix_total = confusion_matrix(all_labels, all_preds)
+    classes = ["Unlabeled", "Road", "Vegetation", "Painted Metal", "Sky", "Concrete/Stone/Brick", "Unpainted Metal", "Glass/Transparent Plastic"]
+    # classes = ["Sky", "Background"]
+    df_cm = pd.DataFrame(confusion_matrix_total / \
+                            (np.sum(confusion_matrix_total, axis=1)[:, None] + \
+                                (np.sum(confusion_matrix_total, axis=1) == 0).astype(int)[:, None]), 
+                         index=[i for i in classes],
+                         columns=[i for i in classes])
+    plt.figure(figsize=(12, 10))
+    fig = sn.heatmap(df_cm, annot=True).get_figure()
+    
+    return metric_logger.meters["loss"].global_avg, metric_logger.meters["acc"].global_avg, \
+           optimizer.param_groups[0]["lr"], fig
 
 
 def evaluate(model: nn.Module,
@@ -93,6 +118,8 @@ def evaluate(model: nn.Module,
     metric_logger.add_meter('loss', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
     metric_logger.add_meter('acc', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
     header = 'Test:'
+    all_preds, all_labels = [], []
+    
     with torch.no_grad(), torch.cuda.amp.autocast(enabled=scaler is not None):
         for images, targets in metric_logger.log_every(data_loader, 10, header):
             images, targets = images.to(device), targets.to(device)
@@ -100,14 +127,38 @@ def evaluate(model: nn.Module,
             
             _, accuracy = custom_loss(output, targets, model, 0.1, 0.1, False)
             basic_loss = F.cross_entropy(output, targets.squeeze(1))
+            
+            # store the predictions and labels
+            all_preds.append(output.argmax(-1).view(-1, 1).cpu().numpy().astype(int))
+            all_labels.append(targets.view(-1, 1).cpu().numpy())
 
             metric_logger.update(loss=basic_loss.item())
             metric_logger.update(acc=accuracy.item())
             confmat.update(targets.flatten(), output.argmax(1).flatten())
         
-        metric_logger.synchronize_between_processes()
-        confmat.reduce_from_all_processes()
-    return metric_logger.meters['loss'].global_avg, metric_logger.meters['acc'].global_avg, confmat
+    metric_logger.synchronize_between_processes()
+    confmat.reduce_from_all_processes()
+    print("Averaged stats:", metric_logger)
+    
+    all_preds, all_labels = np.vstack(all_preds), np.vstack(all_labels)
+    # remove the 255 ground truth label
+    all_preds, all_labels = all_preds[all_labels != 255], all_labels[all_labels != 255]
+    # Check which label is missing in all_preds
+    missing_labels = [i for i in range(num_classes) if i not in all_labels]
+    if len(missing_labels) > 0:
+        print(f"Missing labels: {missing_labels}")
+    confusion_matrix_total = confusion_matrix(all_labels, all_preds)
+    classes = ["Unlabeled", "Road", "Vegetation", "Painted Metal", "Sky", "Concrete/Stone/Brick", "Unpainted Metal", "Glass/Transparent Plastic"]
+    # classes = ["Sky", "Background"]
+    df_cm = pd.DataFrame(confusion_matrix_total / \
+                            (np.sum(confusion_matrix_total, axis=1)[:, None] + \
+                                (np.sum(confusion_matrix_total, axis=1) == 0).astype(int)[:, None]), 
+                         index=[i for i in classes],
+                         columns=[i for i in classes])
+    plt.figure(figsize=(12, 10))
+    fig = sn.heatmap(df_cm, annot=True).get_figure()
+    
+    return metric_logger.meters['loss'].global_avg, metric_logger.meters['acc'].global_avg, confmat, fig
         
 
 

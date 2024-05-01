@@ -10,19 +10,9 @@ import train_utils.distributed_utils as utils
 
 def criterion(inputs, target, model, num_classes=6):
     losses = nn.functional.binary_cross_entropy_with_logits(inputs, target) if torch.max(target) <= 1 \
-        else nn.functional.cross_entropy(inputs, target.squeeze(-1), ignore_index=255)
+        else nn.functional.cross_entropy(inputs, target, ignore_index=255)
     accuracy = torch.mean(((inputs > 0) == target.byte()).float()) if torch.max(target) <= 1 \
-        else torch.mean((inputs.argmax(-1) == target.squeeze(-1)).float())
-    
-    # # Calculate the confusion matrix
-    # if num_classes == 6:
-    #     # Ensure inputs are on the same device and are flattened
-    #     preds = inputs.argmax(-1).view(-1)
-    #     labels = target.view(-1)
-
-    #     # Compute linear indices for the flattened confusion matrix
-    #     index = num_classes * labels + preds
-    #     confusion_matrix = torch.bincount(index, minlength=num_classes**2).view(num_classes, num_classes)
+        else torch.mean((inputs.argmax(-1) == target).float())
     
     # # L1 norm for model.atten
     # L1_norm = 0.8 * torch.mean(torch.abs(model.module.atten))
@@ -51,7 +41,7 @@ def evaluate(model, data_loader, device, num_classes, scaler=None):
             image, target = image.to(device), target.to(device)
             output = model(image)
             # output = output['out']
-            loss, acc = criterion(output, target.unsqueeze(-1), model)
+            loss, acc = criterion(output, target, model)
             
             # store the predictions and labels
             all_preds.append(output.argmax(-1).view(-1, 1).cpu().numpy().astype(int))
@@ -93,7 +83,7 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, lr_scheduler, 
     all_preds, all_labels = [], []
 
     for image, target, _ in metric_logger.log_every(data_loader, print_freq, header):
-        image, target = image.to(device), target.to(device).unsqueeze(-1)
+        image, target = image.to(device), target.to(device)
         # target = torch.squeeze(target, dim=1)
         with torch.cuda.amp.autocast(enabled=scaler is not None):
             output = model(image)
