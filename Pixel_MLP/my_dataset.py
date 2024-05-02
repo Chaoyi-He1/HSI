@@ -450,7 +450,7 @@ class HSI_Drive(data.Dataset):
         return label
     
     def cache_data(self):
-        self.data_dict = defaultdict(list)
+        data_dict = defaultdict(list)
         for i in range(len(self.data_paths)):
             img = sio.loadmat(self.data_paths[i])["filtered_img"] if not self.use_raw else sio.loadmat(self.data_paths[i])["cube"]
             img = img.transpose(1, 2, 0) if self.use_raw else img
@@ -460,23 +460,29 @@ class HSI_Drive(data.Dataset):
             img = img.reshape(-1, img.shape[-1])
             label = label.reshape(-1)
             
-            if self.use_OSP and not self.use_dual:
+            # remove 255 label
+            img = img[label != 255, :]
+            label = label[label != 255]
+            
+            if self.use_OSP and not self.use_dual and not self.use_raw:
                 img = img[:, [60, 44, 17, 27, 53, 4, 1, 20, 71, 13]]
-            elif self.use_OSP and self.use_dual:
+            elif self.use_OSP and self.use_dual and not self.use_raw:
                 img = img[:, [42, 34, 16, 230, 95, 243, 218, 181, 11, 193]]
             
             for p in range(img.shape[0]):
-                self.data_dict[label[p]].append(img[p])
+                data_dict[label[p]].append(img[p])
         
         # randomly select 5000 samples from each class
-        for k, v in self.data_dict.items():
+        data_dict_selected = {}
+        for k, v in data_dict.items():
+            v = np.array(v)
             if len(v) > 50000:
-                self.data_dict[k] = v[np.random.choice(len(v), 50000, replace=False)]
-        
+                data_dict_selected[k] = v[np.random.choice(len(v), 50000, replace=False), :]
+        del data_dict
         # generate the data and label lists based on the data_dict
         self.data_list = []
         self.label_list = []
-        for k, v in self.data_dict.items():
+        for k, v in data_dict_selected.items():
             self.data_list.extend(v)
             self.label_list.extend([k] * len(v))
     
@@ -492,9 +498,9 @@ class HSI_Drive(data.Dataset):
             img_pos = img_pos.reshape(-1, 2)
             label = label.reshape(-1)
             
-            if self.use_OSP and not self.use_dual:
+            if self.use_OSP and not self.use_dual and not self.use_raw:
                 img = img[:, [60, 44, 17, 27, 53, 4, 1, 20, 71, 13]]
-            elif self.use_OSP and self.use_dual:
+            elif self.use_OSP and self.use_dual and not self.use_raw:
                 img = img[:, [42, 34, 16, 230, 95, 243, 218, 181, 11, 193]]
             
             img = torch.from_numpy(img).to(dtype=torch.float32)
@@ -512,8 +518,10 @@ class HSI_Drive(data.Dataset):
     @staticmethod
     def collate_fn(batch):
         images, targets, img_pos = list(zip(*batch))
-        batched_imgs = torch.stack(images, dim=0).flatten(0, 1)
-        batched_targets = torch.stack(targets, dim=0).flatten(0, 1).to(dtype=torch.int64)
+        batched_imgs = torch.stack(images, dim=0)
+        batched_imgs = batched_imgs.flatten(0, 1) if len(batched_imgs.shape) == 3 else batched_imgs
+        batched_targets = torch.stack(targets, dim=0).to(dtype=torch.int64)
+        batched_targets = batched_targets.flatten(0, 1) if len(batched_targets.shape) == 2 else batched_targets
         batched_img_pos = np.vstack(img_pos) if img_pos[0] is not None else None
         # print max and min of label ignoring 255
         # print(f"Max label: {torch.max(batched_targets[batched_targets != 255])}, Min label: {torch.min(batched_targets[batched_targets != 255])}")

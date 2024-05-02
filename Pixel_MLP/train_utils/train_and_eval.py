@@ -102,8 +102,6 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, lr_scheduler, 
             loss.backward()
             optimizer.step()
 
-        lr_scheduler.step()
-
         lr = optimizer.param_groups[0]["lr"]
         metric_logger.update(loss=loss.item(), lr=lr, acc=acc.item())
         

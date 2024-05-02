@@ -35,7 +35,9 @@ def main(args):
     whole_dataset = HSI_Drive(data_path=args.data_path,
                               use_MF=args.use_MF,
                               use_dual=args.use_dual,
-                              use_OSP=args.use_OSP)
+                              use_OSP=args.use_OSP,
+                              use_raw=args.use_raw,
+                              use_cache=args.use_cache)
     if not args.use_cache:
         train_dataset, val_dataset = stratified_split(whole_dataset, train_ratio=0.8)
     else:
@@ -62,12 +64,14 @@ def main(args):
     print("Creating model")
     if args.img_type == "rgb":
         in_chans = 3
-    elif args.img_type == "OSP":
+    elif args.use_OSP:
         in_chans = 10
-    elif args.img_type == "ALL" and args.use_dual:
+    elif not args.use_OSP and args.use_dual and not args.use_raw:
         in_chans = 252
-    elif args.img_type == "ALL" and not args.use_dual:
+    elif not args.use_OSP and not args.use_dual and not args.use_raw:
         in_chans = 71
+    elif args.use_raw:
+        in_chans = 25
     model = create_model(num_classes=num_classes, in_chans=in_chans)
     model.to(device)
     
@@ -90,7 +94,7 @@ def main(args):
 
     scaler = torch.cuda.amp.GradScaler() if args.amp else None
 
-    lr_scheduler = create_lr_scheduler(optimizer, len(train_data_loader), args.epochs, warmup=False)
+    lr_scheduler = create_lr_scheduler(optimizer, 1, args.epochs, warmup=False)
 
     if args.resume.endswith(".pth"):
         # If map_location is missing, torch.load will first load the module to CPU
@@ -115,7 +119,7 @@ def main(args):
             train_sampler.set_epoch(epoch)
         mean_loss, mean_acc, lr, confusion_mtx = train_one_epoch(model, optimizer, train_data_loader, device, epoch,
                                         lr_scheduler=lr_scheduler, print_freq=args.print_freq, scaler=scaler, num_classes=num_classes)
-
+        lr_scheduler.step()
         loss_val, acc_val, confusion_mtx_val  = evaluate(model, val_data_loader, device=device, num_classes=num_classes, scaler=scaler)
 
         # 只在主进程上进行写操作
@@ -174,7 +178,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--device', default='cuda', help='device')
 
-    parser.add_argument('--num-classes', default=8, type=int, help='num_classes')
+    parser.add_argument('--num-classes', default=5, type=int, help='num_classes')
 
     parser.add_argument('-b', '--batch-size', default=2, type=int,
                         help='images per gpu, the total batch size is $NGPU x batch_size')
