@@ -32,12 +32,12 @@ def main(args):
 
     print("Creating data loaders")
     # load train data set
-    whole_dataset = HSI_Drive(data_path=args.data_path,
-                              use_MF=args.use_MF,
-                              use_dual=args.use_dual,
-                              use_OSP=args.use_OSP,
-                              use_raw=args.use_raw,
-                              use_cache=args.use_cache)
+    whole_dataset = HSI_Drive_V1(data_path=args.data_path,
+                                 use_MF=args.use_MF,
+                                 use_dual=args.use_dual,
+                                 use_OSP=args.use_OSP,
+                                 use_raw=args.use_raw,
+                                 use_cache=args.use_cache)
     if not args.use_cache:
         train_dataset, val_dataset = stratified_split(whole_dataset, train_ratio=0.8)
     else:
@@ -166,12 +166,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description=__doc__)
 
-    parser.add_argument('--data_path', default='/data2/chaoyi/HSI_Dataset/HSI Drive/Image_dataset/', help='dataset')
+    parser.add_argument('--data_path', default='/data2/chaoyi/HSI_Dataset/HSI Drive/v1/', help='dataset')    # /data2/chaoyi/HSI_Dataset/HSI Drive/v1/   /data2/chaoyi/HSI_Dataset/HSI Drive/Image_dataset/
     parser.add_argument('--img_type', default='ALL', help='image type: OSP or ALL or rgb')
     parser.add_argument('--name', default='', help='renames results.txt to results_name.txt if supplied')
     
     parser.add_argument('--use_MF', default=True, type=bool, help='use MF')
-    parser.add_argument('--use_dual', default=True, type=bool, help='use dual')
+    parser.add_argument('--use_dual', default=False, type=bool, help='use dual')
     parser.add_argument('--use_OSP', default=False, type=bool, help='use OSP')
     parser.add_argument('--use_raw', default=True, type=bool, help='use raw')
     parser.add_argument('--use_cache', default=True, type=bool, help='use cache')

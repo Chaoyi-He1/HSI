@@ -222,7 +222,7 @@ if __name__ == "__main__":
     parser.add_argument('--name', default='', help='renames results.txt to results_name.txt if supplied')
     
     parser.add_argument('--use_MF', default=False, type=bool, help='use MF')
-    parser.add_argument('--use_dual', default=True, type=bool, help='use dual')
+    parser.add_argument('--use_dual', default=False, type=bool, help='use dual')
     parser.add_argument('--use_OSP', default=False, type=bool, help='use OSP')
     parser.add_argument('--use_raw', default=True, type=bool, help='use raw')
 
