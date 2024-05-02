@@ -180,7 +180,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--num-classes', default=5, type=int, help='num_classes')
 
-    parser.add_argument('-b', '--batch-size', default=2, type=int,
+    parser.add_argument('-b', '--batch-size', default=512, type=int,
                         help='images per gpu, the total batch size is $NGPU x batch_size')
 
     parser.add_argument('--start_epoch', default=0, type=int, help='start epoch')

@@ -9,9 +9,9 @@ import train_utils.distributed_utils as utils
 
 
 def criterion(inputs, target, model, num_classes=6):
-    losses = nn.functional.binary_cross_entropy_with_logits(inputs, target) if torch.max(target) <= 1 \
+    losses = nn.functional.binary_cross_entropy_with_logits(inputs, target) if inputs.shape[-1] <= 1 \
         else nn.functional.cross_entropy(inputs, target, ignore_index=255)
-    accuracy = torch.mean(((inputs > 0) == target.byte()).float()) if torch.max(target) <= 1 \
+    accuracy = torch.mean(((inputs > 0) == target.byte()).float()) if inputs.shape[-1] <= 1 \
         else torch.mean((inputs.argmax(-1) == target).float())
     
     # # L1 norm for model.atten

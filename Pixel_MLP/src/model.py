@@ -13,9 +13,9 @@ class MLP_Pixel(nn.Module):
         super(MLP_Pixel, self).__init__()
         self.layers = nn.Sequential(
             nn.Linear(in_nodes, 25),
-            # nn.ReLU(inplace=True),
+            nn.ReLU(inplace=True),
             nn.Linear(25, 300),
-            # nn.ReLU(inplace=True),
+            nn.ReLU(inplace=True),
             nn.Linear(300, num_class)
         )
     
