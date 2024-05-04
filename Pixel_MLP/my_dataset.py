@@ -589,7 +589,7 @@ class HSI_Drive_V1(data.Dataset):
     def cache_data(self):
         data_dict = defaultdict(list)
         for i in range(len(self.data_paths)):
-            img = sio.loadmat(self.data_paths[i])["filtered_img"] if not self.use_raw else sio.loadmat(self.data_paths[i])["cube"]
+            img = sio.loadmat(self.data_paths[i])["filtered_img"] if not self.use_raw else sio.loadmat(self.data_paths[i])["cube_fl32"]
             img = img.transpose(1, 2, 0) if self.use_raw else img
             label = np.array(Image.open(self.label_paths[i]))
             label = self.relabeling(label)
@@ -625,7 +625,7 @@ class HSI_Drive_V1(data.Dataset):
     
     def __getitem__(self, index):
         if not self.use_cache:
-            img = sio.loadmat(self.data_paths[index])["filtered_img"] if not self.use_raw else sio.loadmat(self.data_paths[index])["cube"]
+            img = sio.loadmat(self.data_paths[index])["filtered_img"] if not self.use_raw else sio.loadmat(self.data_paths[index])["cube_fl32"]
             img = img.transpose(1, 2, 0) if self.use_raw else img
             label = np.array(Image.open(self.label_paths[index]))
             label = self.relabeling(label)

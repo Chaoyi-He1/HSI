@@ -25,18 +25,37 @@ class FCNN(nn.Module):
         self.num_classes = num_classes
         
         self.model = nn.Sequential(
-            ConvBNReLU(in_ch, 64, kernel_size=3),
-            ConvBNReLU(64, 128, kernel_size=3),
-            ConvBNReLU(128, 512, kernel_size=3),
-            nn.Conv2d(512, num_classes, kernel_size=3, padding=1),
+            ConvBNReLU(in_ch, 25, kernel_size=3),
+            ConvBNReLU(25, 300, kernel_size=3),
+            # ConvBNReLU(128, 512, kernel_size=3),
+            nn.Conv2d(300, num_classes, kernel_size=3, padding=1),
         )
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.model(x)
 
+class FCNN_4lv(nn.Module):
+    def __init__(self, in_ch: int, num_classes: int):
+        super().__init__()
+
+        self.in_ch = in_ch
+        self.num_classes = num_classes
+
+        self.model = nn.Sequential(
+                ConvBNReLU(in_ch, 64, kernel_size=3),
+                ConvBNReLU(64, 128, kernel_size=3),
+                ConvBNReLU(128, 512, kernel_size=3),
+                nn.Conv2d(512, num_classes, kernel_size=3, padding=1),
+            )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.model(x)
 
 def FCNN_lite(in_ch: int, num_classes: int) -> FCNN:
     return FCNN(in_ch, num_classes)
+
+def FCNN_4lv(in_ch: int, num_classes: int) -> FCNN_4lv:
+    return FCNN_4lv(in_ch, num_classes)
 
 
 def convert_onnx(m, save_path):
