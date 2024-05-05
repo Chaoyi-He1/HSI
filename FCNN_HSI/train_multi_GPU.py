@@ -4,7 +4,7 @@ import datetime
 
 import torch
 
-from src import FCNN_lite
+from src import FCNN_lite, FCNN_4
 from train_eval_util import train_one_epoch, evaluate, create_lr_scheduler, init_distributed_mode, save_on_master, mkdir
 from my_dataset import *
 from torch.utils.tensorboard import SummaryWriter
@@ -14,7 +14,7 @@ import pandas as pd
 
 
 def create_model(in_chans, num_classes):
-    model = FCNN_lite(in_ch=in_chans, num_classes=num_classes)
+    model = FCNN_4(in_ch=in_chans, num_classes=num_classes)
     return model
 
 

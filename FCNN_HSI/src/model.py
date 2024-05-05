@@ -54,7 +54,7 @@ class FCNN_4lv(nn.Module):
 def FCNN_lite(in_ch: int, num_classes: int) -> FCNN:
     return FCNN(in_ch, num_classes)
 
-def FCNN_4lv(in_ch: int, num_classes: int) -> FCNN_4lv:
+def FCNN_4(in_ch: int, num_classes: int) -> FCNN_4lv:
     return FCNN_4lv(in_ch, num_classes)
 
 

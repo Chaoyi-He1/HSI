@@ -11,7 +11,6 @@ from sklearn.metrics import confusion_matrix
 import matplotlib.pyplot as plt
 
 
-
 def custom_loss(output, target, model, lambda1, lambda2, is_train=True):
     basic_loss = F.cross_entropy(output, target, ignore_index=255)
     

@@ -506,7 +506,7 @@ class HSI_Drive_V1(data.Dataset):
     
     def __getitem__(self, index):
         img = sio.loadmat(self.data_paths[index])["filtered_img"] if not self.use_raw else sio.loadmat(self.data_paths[index])["cube_fl32"]
-        img = img.transpose(1, 2, 0) if self.use_raw else img
+        img = img.transpose(1, 2, 0) if self.use_raw else img / 1e3
         label = np.array(Image.open(self.label_paths[index]))
         label = self.relabeling(label)
         img_pos = np.indices(img.shape[:2]).transpose(1, 2, 0)
