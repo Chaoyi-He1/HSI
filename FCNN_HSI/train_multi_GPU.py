@@ -223,7 +223,7 @@ if __name__ == "__main__":
     
     parser.add_argument('--use_MF', default=False, type=bool, help='use MF')
     parser.add_argument('--use_dual', default=True, type=bool, help='use dual')
-    parser.add_argument('--use_OSP', default=False, type=bool, help='use OSP')
+    parser.add_argument('--use_OSP', default=True, type=bool, help='use OSP')
     parser.add_argument('--use_raw', default=False, type=bool, help='use raw')
 
     parser.add_argument('--device', default='cuda', help='device')
