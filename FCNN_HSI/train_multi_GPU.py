@@ -14,7 +14,7 @@ import pandas as pd
 
 
 def create_model(in_chans, num_classes):
-    model = FCNN_4(in_ch=in_chans, num_classes=num_classes)
+    model = FCNN_lite(in_ch=in_chans, num_classes=num_classes)
     return model
 
 
@@ -78,7 +78,8 @@ def main(args):
                                  use_MF=args.use_MF,
                                  use_dual=args.use_dual,
                                  use_OSP=args.use_OSP,
-                                 use_raw=args.use_raw,)
+                                 use_raw=args.use_raw,
+                                 use_rgb=args.use_rgb,)
     train_dataset, val_dataset = stratified_split(whole_dataset, train_ratio=0.8)
     
     if args.distributed:
@@ -225,6 +226,7 @@ if __name__ == "__main__":
     parser.add_argument('--use_dual', default=True, type=bool, help='use dual')
     parser.add_argument('--use_OSP', default=True, type=bool, help='use OSP')
     parser.add_argument('--use_raw', default=False, type=bool, help='use raw')
+    parser.add_argument('--use_rgb', default=True, type=bool, help='use rgb')
 
     parser.add_argument('--device', default='cuda', help='device')
 

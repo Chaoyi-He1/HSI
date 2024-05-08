@@ -349,11 +349,12 @@ class HSI_Transformer_all(data.Dataset):
 
 class HSI_Drive(data.Dataset):
     def __init__(self, data_path: str = "", use_MF: bool = True, use_dual: bool = True,
-                 use_OSP: bool = True, use_raw: bool = False, transforms=None):
+                 use_OSP: bool = True, use_raw: bool = False, use_rgb: bool = False, transforms=None):
         self.use_MF = use_MF
         self.use_dual = use_dual
         self.use_OSP = use_OSP
         self.use_raw = use_raw
+        self.use_rgb = use_rgb
         
         self.transforms = transforms
         
@@ -377,6 +378,7 @@ class HSI_Drive(data.Dataset):
         
         self.data_paths = [os.path.join(self.data_folder_path, file) for file in os.listdir(self.data_folder_path) if file.endswith(".mat")]
         self.label_paths = [file.replace("cubes_fl32", "labels").replace(path_ext, "").replace(name_ext, "").replace(".mat", ".png") for file in self.data_paths]
+        self.rgb_paths = [file.replace("cubes_fl32", "RGB").replace(path_ext, "").replace(name_ext, "_pseudocolor").replace(".mat", ".png") for file in self.data_paths]
         
         for i in range(len(self.data_paths) - 1, -1, -1):
             if not os.path.isfile(self.label_paths[i]):
@@ -410,15 +412,19 @@ class HSI_Drive(data.Dataset):
         
     
     def __getitem__(self, index):
-        img = sio.loadmat(self.data_paths[index])["filtered_img"] if not self.use_raw else sio.loadmat(self.data_paths[index])["cube"]
-        img = img.transpose(1, 2, 0) if self.use_raw else img
+        if not self.use_rgb:
+            img = sio.loadmat(self.data_paths[index])["filtered_img"] if not self.use_raw else sio.loadmat(self.data_paths[index])["cube"]
+            img = img.transpose(1, 2, 0) if self.use_raw else img
+        else:
+            img = np.array(Image.open(self.rgb_paths[index]))
+            
         label = np.array(Image.open(self.label_paths[index]))
         label = self.relabeling(label)
         img_pos = np.indices(img.shape[:2]).transpose(1, 2, 0)
         
-        if self.use_OSP and not self.use_dual and not self.use_raw:
+        if self.use_OSP and not self.use_dual and not self.use_raw and not self.use_rgb:
             img = img[:, :, [60, 44, 17, 27, 53, 4, 1, 20, 71, 13]]
-        elif self.use_OSP and self.use_dual and not self.use_raw:
+        elif self.use_OSP and self.use_dual and not self.use_raw and not self.use_rgb:
             img = img[:, :, [42, 34, 16, 230, 95, 243, 218, 181, 11, 193]]
         
         img = torch.from_numpy(img).to(dtype=torch.float32).permute(2, 0, 1)
@@ -447,11 +453,12 @@ class HSI_Drive(data.Dataset):
 
 class HSI_Drive_V1(data.Dataset):
     def __init__(self, data_path: str = "", use_MF: bool = True, use_dual: bool = True,
-                 use_OSP: bool = True, use_raw: bool = False, transforms=None):
+                 use_OSP: bool = True, use_raw: bool = False, use_rgb: bool = False, transforms=None):
         self.use_MF = use_MF
         self.use_dual = use_dual
         self.use_OSP = use_OSP
         self.use_raw = use_raw
+        self.use_rgb = use_rgb
         
         self.transforms = transforms
         
@@ -472,6 +479,7 @@ class HSI_Drive_V1(data.Dataset):
         
         self.data_paths = [os.path.join(self.data_folder_path, file) for file in os.listdir(self.data_folder_path) if file.endswith(".mat")]
         self.label_paths = [file.replace("cubes_float32", "labels").replace(path_ext, "").replace(name_ext, "").replace(".mat", ".png") for file in self.data_paths]
+        self.rgb_paths = [file.replace("cubes_float32", "RGB").replace(path_ext, "").replace(name_ext, "_color").replace(".mat", ".png") for file in self.data_paths]
         
         for i in range(len(self.data_paths) - 1, -1, -1):
             if not os.path.isfile(self.label_paths[i]):
@@ -505,15 +513,19 @@ class HSI_Drive_V1(data.Dataset):
         
     
     def __getitem__(self, index):
-        img = sio.loadmat(self.data_paths[index])["filtered_img"] if not self.use_raw else sio.loadmat(self.data_paths[index])["cube_fl32"]
-        img = img.transpose(1, 2, 0) if self.use_raw else img / 1e3
+        if not self.use_rgb:
+            img = sio.loadmat(self.data_paths[index])["filtered_img"] if not self.use_raw else sio.loadmat(self.data_paths[index])["cube_fl32"]
+            img = img.transpose(1, 2, 0) if self.use_raw else img / 1e3
+        else:
+            img = np.array(Image.open(self.rgb_paths[index]))
+            
         label = np.array(Image.open(self.label_paths[index]))
         label = self.relabeling(label)
         img_pos = np.indices(img.shape[:2]).transpose(1, 2, 0)
         
-        if self.use_OSP and not self.use_dual and not self.use_raw:
+        if self.use_OSP and not self.use_dual and not self.use_raw and not self.use_rgb:
             img = img[:, :, [60, 44, 17, 27, 53, 4, 1, 20, 71, 13]]
-        elif self.use_OSP and self.use_dual and not self.use_raw:
+        elif self.use_OSP and self.use_dual and not self.use_raw and not self.use_rgb:
             img = img[:, :, [42, 34, 16, 230, 95, 243, 218, 181, 11, 193]]
         
         img = torch.from_numpy(img).to(dtype=torch.float32).permute(2, 0, 1)
