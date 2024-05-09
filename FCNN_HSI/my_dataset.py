@@ -388,6 +388,7 @@ class HSI_Drive(data.Dataset):
         assert len(self.data_paths) == len(self.label_paths) and len(self.data_paths) > 0, "The number of data files and label files are not equal."
 
         self.hsi_drive_original_label = {
+            0: "Unlabeled",
             1: "Road",
             2: "Road marks",
             3: "Vegetation",
@@ -407,7 +408,7 @@ class HSI_Drive(data.Dataset):
                 label[label == k] = 255
         # relabel the label from 0 to end, with 255 as the background
         for i, k in enumerate(self.selected_labels):
-            label[label == k] = i + 1
+            label[label == k] = i
         return label
         
     
@@ -489,6 +490,7 @@ class HSI_Drive_V1(data.Dataset):
         assert len(self.data_paths) == len(self.label_paths) and len(self.data_paths) > 0, "The number of data files and label files are not equal."
 
         self.hsi_drive_original_label = {
+            0: "Unlabeled",
             1: "Road",
             2: "Road marks",
             3: "Vegetation",
@@ -508,7 +510,7 @@ class HSI_Drive_V1(data.Dataset):
                 label[label == k] = 255
         # relabel the label from 0 to end, with 255 as the background
         for i, k in enumerate(self.selected_labels):
-            label[label == k] = i + 1
+            label[label == k] = i
         return label
         
     

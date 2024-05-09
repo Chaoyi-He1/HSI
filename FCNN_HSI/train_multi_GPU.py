@@ -14,7 +14,7 @@ import pandas as pd
 
 
 def create_model(in_chans, num_classes):
-    model = FCNN_lite(in_ch=in_chans, num_classes=num_classes)
+    model = FCNN_4(in_ch=in_chans, num_classes=num_classes)
     return model
 
 
@@ -101,7 +101,7 @@ def main(args):
 
     print("Creating model")
     
-    if args.img_type == "rgb":
+    if args.use_rgb:
         in_chans = 3
     elif args.use_OSP:
         in_chans = 10
