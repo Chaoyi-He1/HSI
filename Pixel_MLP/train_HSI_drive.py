@@ -37,7 +37,8 @@ def main(args):
                                  use_dual=args.use_dual,
                                  use_OSP=args.use_OSP,
                                  use_raw=args.use_raw,
-                                 use_cache=args.use_cache)
+                                 use_cache=args.use_cache,
+                                 use_rgb=args.use_rgb,)
     if not args.use_cache:
         train_dataset, val_dataset = stratified_split(whole_dataset, train_ratio=0.8)
     else:
