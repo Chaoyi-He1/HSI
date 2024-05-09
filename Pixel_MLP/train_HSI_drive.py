@@ -22,7 +22,7 @@ def main(args):
     if args.rank in [-1, 0]:
         print('Start Tensorboard with "tensorboard --logdir=runs", view at http://localhost:6006/')
         # Save tb_writer to runs/HSI_drive/times
-        tb_writer = SummaryWriter(log_dir="runs/HSI_drive/{}".format(datetime.datetime.now().strftime('%Y%m%d-%H%M%S')))
+        tb_writer = SummaryWriter(log_dir="runs/HSI_drive/9 cls/Dual_HVI/{}".format(datetime.datetime.now().strftime('%Y%m%d-%H%M%S')))
 
     device = torch.device(args.device)
 
@@ -172,15 +172,15 @@ if __name__ == "__main__":
     parser.add_argument('--name', default='', help='renames results.txt to results_name.txt if supplied')
     
     parser.add_argument('--use_MF', default=True, type=bool, help='use MF')
-    parser.add_argument('--use_dual', default=False, type=bool, help='use dual')
+    parser.add_argument('--use_dual', default=True, type=bool, help='use dual')
     parser.add_argument('--use_OSP', default=False, type=bool, help='use OSP')
     parser.add_argument('--use_raw', default=False, type=bool, help='use raw')
     parser.add_argument('--use_cache', default=True, type=bool, help='use cache')
-    parser.add_argument('--use_rgb', default=True, type=bool, help='use rgb')
+    parser.add_argument('--use_rgb', default=False, type=bool, help='use rgb')
 
     parser.add_argument('--device', default='cuda', help='device')
 
-    parser.add_argument('--num-classes', default=5, type=int, help='num_classes')
+    parser.add_argument('--num-classes', default=9, type=int, help='num_classes')
 
     parser.add_argument('-b', '--batch-size', default=512, type=int,
                         help='images per gpu, the total batch size is $NGPU x batch_size')

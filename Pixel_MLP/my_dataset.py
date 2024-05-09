@@ -587,7 +587,7 @@ class HSI_Drive_V1(data.Dataset):
             9: "Unpainted Metal",
             10: "Glass/Transparent Plastic",
         }
-        self.selected_labels = [0, 1, 2, 4, 7]
+        self.selected_labels = [1, 2, 3, 4, 5, 6, 7, 9, 10]
         if use_cache:
             self.cache_data()
         

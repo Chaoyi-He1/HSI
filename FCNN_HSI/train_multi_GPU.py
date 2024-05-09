@@ -64,7 +64,7 @@ def main(args):
     print(args)
     if args.rank in [-1, 0]:
         print('Start Tensorboard with "tensorboard --logdir=runs", view at http://localhost:6006/')
-        tb_writer = SummaryWriter(log_dir="runs/HSI_drive/{}".format(datetime.datetime.now().strftime('%Y%m%d-%H%M%S')))
+        tb_writer = SummaryWriter(log_dir="runs/HSI_drive/9 cls/Dual_HVI/{}".format(datetime.datetime.now().strftime('%Y%m%d-%H%M%S')))
 
     device = torch.device(args.device)
 
@@ -174,8 +174,9 @@ def main(args):
         if args.rank in [-1, 0]:
             if tb_writer:
                 tags = ['train_loss', 'train_acc', 'val_loss', 'val_acc', 
-                        'IoU/unlabeled', 'IoU/Road', 'IoU/Road marks', 'IoU/Painted Metal',
-                        'IoU/Pedestrian or Cyclist',
+                        'IoU/Road', 'IoU/Road marks', 'IoU/Vegetation', 'IoU/Painted Metal',
+                        'IoU/Sky', 'IoU/Concrete or Stone or Brick', 'IoU/Pedestrian or Cyclist',
+                        'IoU/Unpainted Metal', 'IoU/Glass or Transparent Plastic',
                         'mean_IoU']
                 values = [mean_loss, mean_acc, loss_val, acc_val] + [i for i in (iu * 100).tolist()] + [iu.mean().item() * 100]
                 for x, tag in zip(values, tags):
@@ -224,17 +225,17 @@ if __name__ == "__main__":
     
     parser.add_argument('--use_MF', default=False, type=bool, help='use MF')
     parser.add_argument('--use_dual', default=True, type=bool, help='use dual')
-    parser.add_argument('--use_OSP', default=True, type=bool, help='use OSP')
+    parser.add_argument('--use_OSP', default=False, type=bool, help='use OSP')
     parser.add_argument('--use_raw', default=False, type=bool, help='use raw')
-    parser.add_argument('--use_rgb', default=True, type=bool, help='use rgb')
+    parser.add_argument('--use_rgb', default=False, type=bool, help='use rgb')
 
     parser.add_argument('--device', default='cuda', help='device')
 
-    parser.add_argument('--num-classes', default=5, type=int, help='num_classes')
+    parser.add_argument('--num-classes', default=9, type=int, help='num_classes')
     parser.add_argument('--lambda1', default=0.4, type=float, help='lambda1')
     parser.add_argument('--lambda2', default=0.8, type=float, help='lambda2')
 
-    parser.add_argument('-b', '--batch-size', default=2, type=int,
+    parser.add_argument('-b', '--batch-size', default=4, type=int,
                         help='images per gpu, the total batch size is $NGPU x batch_size')
 
     parser.add_argument('--start_epoch', default=0, type=int, help='start epoch')

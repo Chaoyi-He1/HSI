@@ -60,7 +60,7 @@ def evaluate(model, data_loader, device, num_classes, scaler=None):
     if len(missing_labels) > 0:
         print(f"Missing labels: {missing_labels}")
     confusion_matrix_total = confusion_matrix(all_labels, all_preds)
-    classes = ["Unlabeled", "Road", "Road marks", "Painted Metal", "Pedestrian/Cyclist"]
+    classes = ["Road", "Road marks", "Vegetation", "Painted Metal", "Sky", "Concrete/Stone/Brick", "Pedestrian/Cyclist", "Unpainted Metal", "Glass/Transparent Plastic"]
     # classes = ["Sky", "Background"]
     df_cm = pd.DataFrame(confusion_matrix_total / \
                             (np.sum(confusion_matrix_total, axis=1)[:, None] + \
@@ -115,7 +115,7 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, lr_scheduler, 
     # remove the 255 ground truth label
     all_preds, all_labels = all_preds[all_labels != 255], all_labels[all_labels != 255]
     confusion_matrix_total = confusion_matrix(all_labels, all_preds)
-    classes = ["Unlabeled", "Road", "Road marks", "Painted Metal", "Pedestrian/Cyclist"]
+    classes = ["Road", "Road marks", "Vegetation", "Painted Metal", "Sky", "Concrete/Stone/Brick", "Pedestrian/Cyclist", "Unpainted Metal", "Glass/Transparent Plastic"]
     # classes = ["Sky", "Background"]
     df_cm = pd.DataFrame(confusion_matrix_total / \
                             (np.sum(confusion_matrix_total, axis=1)[:, None] + \
