@@ -4,7 +4,7 @@ import datetime
 
 import torch
 
-from src import FCNN_lite, FCNN_4
+from src import FCNN_lite, FCNN_4, UNet
 from train_eval_util import train_one_epoch, evaluate, create_lr_scheduler, init_distributed_mode, save_on_master, mkdir
 from my_dataset import *
 from torch.utils.tensorboard import SummaryWriter
@@ -13,8 +13,13 @@ import numpy as np
 import pandas as pd
 
 
-def create_model(in_chans, num_classes):
-    model = FCNN_4(in_ch=in_chans, num_classes=num_classes)
+def create_model(in_chans, num_classes, model="Unet"):
+    if model == 'FCNN_lite':
+        model = FCNN_lite(in_ch=in_chans, num_classes=num_classes)
+    elif model == 'FCNN_4':
+        model = FCNN_4(in_ch=in_chans, num_classes=num_classes)
+    elif model == 'Unet':
+        model = UNet(in_channels=in_chans, num_classes=num_classes, base_c=32)
     return model
 
 
