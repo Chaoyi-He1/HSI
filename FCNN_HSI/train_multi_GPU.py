@@ -11,6 +11,7 @@ from torch.utils.tensorboard import SummaryWriter
 import transforms as T
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
 
 def create_model(in_chans, num_classes, model="Unet"):
@@ -189,6 +190,8 @@ def main(args):
                 # add confusion matrix to tensorboard
                 tb_writer.add_figure('confusion_matrix', confusion_mtx, epoch)
                 tb_writer.add_figure('confusion_matrix_val', confusion_mtx_val, epoch)
+                plt.close(confusion_mtx)
+                plt.close(confusion_mtx_val)
                     
             # write into txt
             with open(results_file, "a") as f:
