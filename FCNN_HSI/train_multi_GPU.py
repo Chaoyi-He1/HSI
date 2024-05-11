@@ -14,7 +14,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 
-def create_model(in_chans, num_classes, model="Unet"):
+def create_model(in_chans, num_classes, model="FCNN_lite"):
     if model == 'FCNN_lite':
         model = FCNN_lite(in_ch=in_chans, num_classes=num_classes)
     elif model == 'FCNN_4':
