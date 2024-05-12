@@ -22,7 +22,7 @@ def main(args):
     if args.rank in [-1, 0]:
         print('Start Tensorboard with "tensorboard --logdir=runs", view at http://localhost:6006/')
         # Save tb_writer to runs/HSI_drive/times
-        tb_writer = SummaryWriter(log_dir="runs/HSI_drive/9 cls/Dual_HVI/{}".format(datetime.datetime.now().strftime('%Y%m%d-%H%M%S')))
+        tb_writer = SummaryWriter(log_dir="runs/HSI_drive/9 cls/raw/{}".format(datetime.datetime.now().strftime('%Y%m%d-%H%M%S')))
 
     device = torch.device(args.device)
 
@@ -176,7 +176,7 @@ if __name__ == "__main__":
     parser.add_argument('--use_OSP', default=False, type=bool, help='use OSP')
     parser.add_argument('--use_raw', default=False, type=bool, help='use raw')
     parser.add_argument('--use_cache', default=True, type=bool, help='use cache')
-    parser.add_argument('--use_rgb', default=False, type=bool, help='use rgb')
+    parser.add_argument('--use_rgb', default=True, type=bool, help='use rgb')
 
     parser.add_argument('--device', default='cuda', help='device')
 
