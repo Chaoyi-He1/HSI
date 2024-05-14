@@ -44,7 +44,7 @@ def evaluate(model, data_loader, device, num_classes, scaler=None, epoch=0):
             
             loss, acc = criterion(output, target, model)
             
-            if epoch > 200:
+            if epoch > 290:
                 pred_labels = Spacial_Regularization_v2(output, img_pos)
                 acc = torch.mean((pred_labels.view(-1) == target.view(-1)).float())
                 
@@ -62,6 +62,7 @@ def evaluate(model, data_loader, device, num_classes, scaler=None, epoch=0):
     print("Averaged stats:", metric_logger)
     
     all_preds, all_labels = np.vstack(all_preds), np.vstack(all_labels)
+    all_labels_ = all_labels.copy()
     # remove the 255 ground truth label
     all_preds, all_labels = all_preds[all_labels != 255], all_labels[all_labels != 255]
     
@@ -82,9 +83,9 @@ def evaluate(model, data_loader, device, num_classes, scaler=None, epoch=0):
     fig = sn.heatmap(df_cm, annot=True).get_figure()
     
     # confusion_matrix_total_sr
-    if epoch > 200:
+    if epoch > 290:
         all_preds_sr = np.vstack(all_preds_sr)
-        all_preds_sr = all_preds_sr[all_labels != 255]
+        all_preds_sr = all_preds_sr[all_labels_ != 255]
         
         confusion_matrix_total_sr = confusion_matrix(all_labels, all_preds_sr)
         df_cm_sr = pd.DataFrame(confusion_matrix_total_sr / \

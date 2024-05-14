@@ -131,7 +131,7 @@ def main(args):
                                                                  lr_scheduler=lr_scheduler, print_freq=args.print_freq, 
                                                                  scaler=scaler, num_classes=num_classes)
         lr_scheduler.step()
-        if epoch <= 200:
+        if epoch <= 290:
             loss_val, acc_val, confusion_mtx_val  = evaluate(model, val_data_loader, device=device, num_classes=num_classes, scaler=scaler, epoch=epoch)
         else:
             loss_val, acc_val, confusion_mtx_val, confusion_mtx_val_sr = evaluate(model, val_data_loader, device=device, num_classes=num_classes, scaler=scaler, epoch=epoch)
@@ -146,7 +146,7 @@ def main(args):
                 # add confusion matrix to tensorboard
                 tb_writer.add_figure('confusion_matrix', confusion_mtx, epoch)
                 tb_writer.add_figure('confusion_matrix_val', confusion_mtx_val, epoch)
-                if epoch > 200:
+                if epoch > 290:
                     tb_writer.add_figure('confusion_matrix_val_sr', confusion_mtx_val_sr, epoch)
                     
             # write into txt
@@ -224,7 +224,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--output-dir', default='./Pixel_MLP/multi_train/HSI_drive/OSP', help='path where to save')
 
-    parser.add_argument('--resume', default='./Pixel_MLP/multi_train/OSP/model_030', help='resume from checkpoint')
+    parser.add_argument('--resume', default='./Pixel_MLP/multi_train/HSI_drive/OSP/model_200', help='resume from checkpoint')
 
     parser.add_argument(
         "--test-only",
