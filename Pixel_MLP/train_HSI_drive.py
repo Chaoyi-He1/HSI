@@ -39,11 +39,20 @@ def main(args):
                                  use_raw=args.use_raw,
                                  use_cache=args.use_cache,
                                  use_rgb=args.use_rgb,)
+    whole_img_dataset = HSI_Drive_V1(data_path=args.data_path,
+                                     use_MF=args.use_MF,
+                                     use_dual=args.use_dual,
+                                     use_OSP=args.use_OSP,
+                                     use_raw=args.use_raw,
+                                     use_cache=False,
+                                     use_rgb=args.use_rgb,)
+    
     if not args.use_cache:
         train_dataset, val_dataset = stratified_split(whole_dataset, train_ratio=0.8)
     else:
         train_dataset, val_dataset = random_split(whole_dataset, [int(0.8*len(whole_dataset)), len(whole_dataset)-int(0.8*len(whole_dataset))])
-
+    
+    val_dataset, _ = stratified_split(whole_img_dataset, train_ratio=0.8)
     
     if args.distributed:
         train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
@@ -53,14 +62,14 @@ def main(args):
         test_sampler = torch.utils.data.SequentialSampler(val_dataset)
 
     train_data_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=args.batch_size,
+        train_dataset, batch_size=512,
         sampler=train_sampler, num_workers=args.workers,
         collate_fn=whole_dataset.collate_fn, drop_last=True)
 
     val_data_loader = torch.utils.data.DataLoader(
         val_dataset, batch_size=args.batch_size,
         sampler=test_sampler, num_workers=args.workers,
-        collate_fn=whole_dataset.collate_fn)
+        collate_fn=whole_img_dataset.collate_fn)
 
     print("Creating model")
     if args.use_rgb:
@@ -119,9 +128,13 @@ def main(args):
         if args.distributed:
             train_sampler.set_epoch(epoch)
         mean_loss, mean_acc, lr, confusion_mtx = train_one_epoch(model, optimizer, train_data_loader, device, epoch,
-                                        lr_scheduler=lr_scheduler, print_freq=args.print_freq, scaler=scaler, num_classes=num_classes)
+                                                                 lr_scheduler=lr_scheduler, print_freq=args.print_freq, 
+                                                                 scaler=scaler, num_classes=num_classes)
         lr_scheduler.step()
-        loss_val, acc_val, confusion_mtx_val  = evaluate(model, val_data_loader, device=device, num_classes=num_classes, scaler=scaler)
+        if epoch <= 200:
+            loss_val, acc_val, confusion_mtx_val  = evaluate(model, val_data_loader, device=device, num_classes=num_classes, scaler=scaler, epoch=epoch)
+        else:
+            loss_val, acc_val, confusion_mtx_val, confusion_mtx_val_sr = evaluate(model, val_data_loader, device=device, num_classes=num_classes, scaler=scaler, epoch=epoch)
 
         # 只在主进程上进行写操作
         if args.rank in [-1, 0]:
@@ -133,6 +146,8 @@ def main(args):
                 # add confusion matrix to tensorboard
                 tb_writer.add_figure('confusion_matrix', confusion_mtx, epoch)
                 tb_writer.add_figure('confusion_matrix_val', confusion_mtx_val, epoch)
+                if epoch > 200:
+                    tb_writer.add_figure('confusion_matrix_val_sr', confusion_mtx_val_sr, epoch)
                     
             # write into txt
             with open(results_file, "a") as f:
@@ -174,15 +189,15 @@ if __name__ == "__main__":
     parser.add_argument('--use_MF', default=True, type=bool, help='use MF')
     parser.add_argument('--use_dual', default=True, type=bool, help='use dual')
     parser.add_argument('--use_OSP', default=False, type=bool, help='use OSP')
-    parser.add_argument('--use_raw', default=False, type=bool, help='use raw')
+    parser.add_argument('--use_raw', default=True, type=bool, help='use raw')
     parser.add_argument('--use_cache', default=True, type=bool, help='use cache')
-    parser.add_argument('--use_rgb', default=True, type=bool, help='use rgb')
+    parser.add_argument('--use_rgb', default=False, type=bool, help='use rgb')
 
     parser.add_argument('--device', default='cuda', help='device')
 
     parser.add_argument('--num-classes', default=9, type=int, help='num_classes')
 
-    parser.add_argument('-b', '--batch-size', default=512, type=int,
+    parser.add_argument('-b', '--batch-size', default=1, type=int,
                         help='images per gpu, the total batch size is $NGPU x batch_size')
 
     parser.add_argument('--start_epoch', default=0, type=int, help='start epoch')
