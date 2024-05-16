@@ -15,21 +15,67 @@ def criterion(inputs, target, model, num_classes=6):
     accuracy = torch.mean(((inputs > 0) == target.byte()).float()) if inputs.shape[-1] <= 1 \
         else torch.mean((inputs.argmax(-1) == target).float())
     
-    # # L1 norm for model.atten
-    # L1_norm = 0.8 * torch.mean(torch.abs(model.module.atten))
+    # L1 norm for model.atten
+    L1_norm = 0.8 * torch.mean(torch.abs(model.module.atten))
     
-    # # Return losses with L1_norm if model is in training mode
-    # if model.module.training:
-    #     if model.module.atten.requires_grad:
-    #         return losses + L1_norm, accuracy
-    #     else:
-    #         return losses, accuracy
-    # else:
-    #     return losses, accuracy
-    return losses, accuracy
+    # Return losses with L1_norm if model is in training mode
+    if model.module.training:
+        if model.module.atten.requires_grad:
+            return losses + L1_norm, accuracy
+        else:
+            return losses, accuracy
+    else:
+        return losses, accuracy
+    # return losses, accuracy
 
 
 def evaluate(model, data_loader, device, num_classes, scaler=None, epoch=0):
+    model.eval()
+    metric_logger = utils.MetricLogger(delimiter="  ")
+    metric_logger.add_meter('acc', utils.SmoothedValue(window_size=100, fmt='{value:.6f}'))
+    metric_logger.add_meter('loss', utils.SmoothedValue(window_size=100, fmt='{value:.6f}'))
+    header = 'Test:'
+    all_preds, all_labels = [], []
+    
+    with torch.no_grad(), torch.cuda.amp.autocast(enabled=scaler is not None):
+        for image, target, _ in metric_logger.log_every(data_loader, 10, header):
+            image, target = image.to(device), target.to(device)
+            output = model(image)
+            
+            loss, acc = criterion(output, target, model)
+            
+            all_preds.append(output.argmax(-1).view(-1, 1).cpu().numpy())
+            all_labels.append(target.view(-1, 1).cpu().numpy())
+            
+            metric_logger.update(loss=loss.item(), acc=acc.item())
+    
+    metric_logger.synchronize_between_processes()
+    print("Averaged stats:", metric_logger)
+    
+    all_preds, all_labels = np.vstack(all_preds), np.vstack(all_labels)
+    # remove the 255 ground truth label
+    all_preds, all_labels = all_preds[all_labels != 255], all_labels[all_labels != 255]
+    
+    # Check which label is missing in all_preds
+    missing_labels = [i for i in range(num_classes) if i not in all_labels]
+    if len(missing_labels) > 0:
+        print(f"Missing labels: {missing_labels}")
+        
+    confusion_matrix_total = confusion_matrix(all_labels, all_preds)
+    classes = ["Road", "Road marks", "Vegetation", "Painted Metal", "Sky", "Concrete/Stone/Brick", "Pedestrian/Cyclist", "Unpainted Metal", "Glass/Transparent Plastic"]
+    # classes = ["Sky", "Background"]
+    df_cm = pd.DataFrame(confusion_matrix_total / \
+                            (np.sum(confusion_matrix_total, axis=1)[:, None] + \
+                                (np.sum(confusion_matrix_total, axis=1) == 0).astype(int)[:, None]), 
+                         index=[i for i in classes],
+                         columns=[i for i in classes])
+    plt.figure(figsize=(12, 10))
+    fig = sn.heatmap(df_cm, annot=True).get_figure()
+    
+    return metric_logger.meters['loss'].global_avg, metric_logger.meters['acc'].global_avg, fig
+
+
+def evaluate_sr(model, data_loader, device, num_classes, scaler=None, epoch=0):
     model.eval()
     metric_logger = utils.MetricLogger(delimiter="  ")
     metric_logger.add_meter('acc', utils.SmoothedValue(window_size=100, fmt='{value:.6f}'))

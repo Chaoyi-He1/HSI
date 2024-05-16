@@ -18,8 +18,11 @@ class MLP_Pixel(nn.Module):
             nn.ReLU(inplace=True),
             nn.Linear(1024, num_class)
         )
+        
+        self.atten = nn.Parameter(torch.randn(1, in_nodes))
     
     def forward(self, x: Tensor) -> Tensor:
+        x = x * self.atten
         return self.layers(x)
 
 
