@@ -17,3 +17,4 @@ SVR_weights/
 *.pyc
 *.log
 output.log
+*.csv
