@@ -180,8 +180,8 @@ def main(args):
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print('Training time {}'.format(total_time_str))
     
-    atten_weights = model.module.atten.cpu().numpy()
-    np.savetxt('atten_weights.csv', atten_weights, delimiter=',')
+    atten_weights = model_without_ddp.atten.cpu().numpy()
+    np.savetxt('atten_weights_large_mlp.csv', atten_weights, delimiter=',')
     
 
 if __name__ == "__main__":
@@ -197,7 +197,7 @@ if __name__ == "__main__":
     parser.add_argument('--use_MF', default=True, type=bool, help='use MF')
     parser.add_argument('--use_dual', default=True, type=bool, help='use dual')
     parser.add_argument('--use_OSP', default=False, type=bool, help='use OSP')
-    parser.add_argument('--use_raw', default=True, type=bool, help='use raw')
+    parser.add_argument('--use_raw', default=False, type=bool, help='use raw')
     parser.add_argument('--use_cache', default=True, type=bool, help='use cache')
     parser.add_argument('--use_rgb', default=False, type=bool, help='use rgb')
     
