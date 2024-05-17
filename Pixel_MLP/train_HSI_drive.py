@@ -181,7 +181,7 @@ def main(args):
     print('Training time {}'.format(total_time_str))
     
     atten_weights = model_without_ddp.atten.detach().cpu().numpy()
-    np.savetxt('atten_weights_large_mlp.csv', atten_weights, delimiter=',')
+    np.savetxt('atten_weights_lite_mlp.csv', atten_weights, delimiter=',')
     
 
 if __name__ == "__main__":
