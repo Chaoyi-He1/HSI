@@ -220,7 +220,7 @@ if __name__ == "__main__":
     parser.add_argument('-j', '--workers', default=8, type=int, metavar='N',
                         help='number of data loading workers (default: 4)')
 
-    parser.add_argument('--lr', default=0.0001, type=float,
+    parser.add_argument('--lr', default=0.001, type=float,
                         help='initial learning rate')
 
     parser.add_argument('--momentum', default=0.8, type=float, metavar='M',
