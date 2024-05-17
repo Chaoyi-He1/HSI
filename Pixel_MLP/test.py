@@ -11,17 +11,24 @@ import transforms as T
 from torch.utils.tensorboard import SummaryWriter
 
 
-def create_model(model_name="transformer", num_classes=2, in_chans=10):
+def create_model(model_name="mlp_pixel", num_classes=2, in_chans=10):
     model = get_model(model_name, num_classes=num_classes, in_channels=in_chans)
     return model
 
 
 def main(args):
-    device = torch.device(args.device)
-    
     num_classes = args.num_classes
-    model = create_model(num_classes=num_classes, in_chans=3 if args.img_type == "rgb" else 71)
-    model.to(device)
+    if args.use_rgb:
+        in_chans = 3
+    elif args.use_OSP:
+        in_chans = 10
+    elif not args.use_OSP and args.use_dual and not args.use_raw:
+        in_chans = 252
+    elif not args.use_OSP and not args.use_dual and not args.use_raw:
+        in_chans = 71
+    elif args.use_raw:
+        in_chans = 25
+    model = create_model(num_classes=num_classes, in_chans=in_chans)
     
     if args.resume.endswith(".pth"):
         checkpoint = torch.load(args.resume, map_location='cpu')  
@@ -44,6 +51,14 @@ if __name__ == "__main__":
     parser.add_argument('--img_type', default='OSP', help='image type: OSP or PCA or rgb')
     parser.add_argument('--output-dir', default='./Pixel_MLP/multi_train/OSP/', help='path where to save')
     parser.add_argument('--resume', default='./Pixel_MLP/multi_train/OSP/model_008.pth', help='resume from checkpoint')
+    
+    parser.add_argument('--use_MF', default=True, type=bool, help='use MF')
+    parser.add_argument('--use_dual', default=True, type=bool, help='use dual')
+    parser.add_argument('--use_OSP', default=False, type=bool, help='use OSP')
+    parser.add_argument('--use_raw', default=True, type=bool, help='use raw')
+    parser.add_argument('--use_cache', default=True, type=bool, help='use cache')
+    parser.add_argument('--use_rgb', default=False, type=bool, help='use rgb')
+    
     args = parser.parse_args()
     
     main(args)

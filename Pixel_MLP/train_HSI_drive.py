@@ -22,7 +22,7 @@ def main(args):
     if args.rank in [-1, 0]:
         print('Start Tensorboard with "tensorboard --logdir=runs", view at http://localhost:6006/')
         # Save tb_writer to runs/HSI_drive/times
-        tb_writer = SummaryWriter(log_dir="runs/HSI_drive/9 cls/raw/{}".format(datetime.datetime.now().strftime('%Y%m%d-%H%M%S')))
+        tb_writer = SummaryWriter(log_dir="runs/HSI_drive/9 cls/Dual_HVI_attention/{}".format(datetime.datetime.now().strftime('%Y%m%d-%H%M%S')))
 
     device = torch.device(args.device)
 
@@ -71,7 +71,7 @@ def main(args):
     val_data_loader = torch.utils.data.DataLoader(
         val_dataset, batch_size=args.batch_size if not args.use_sr else 1,
         sampler=test_sampler, num_workers=args.workers,
-        collate_fn=whole_img_dataset.collate_fn)
+        collate_fn=whole_dataset.collate_fn if not args.use_sr else whole_img_dataset.collate_fn, drop_last=False)
 
     print("Creating model")
     if args.use_rgb:
@@ -179,7 +179,10 @@ def main(args):
     total_time = time.time() - start_time
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print('Training time {}'.format(total_time_str))
-
+    
+    atten_weights = model.module.atten.cpu().numpy()
+    np.savetxt('atten_weights.csv', atten_weights, delimiter=',')
+    
 
 if __name__ == "__main__":
     import argparse
@@ -194,7 +197,7 @@ if __name__ == "__main__":
     parser.add_argument('--use_MF', default=True, type=bool, help='use MF')
     parser.add_argument('--use_dual', default=True, type=bool, help='use dual')
     parser.add_argument('--use_OSP', default=False, type=bool, help='use OSP')
-    parser.add_argument('--use_raw', default=False, type=bool, help='use raw')
+    parser.add_argument('--use_raw', default=True, type=bool, help='use raw')
     parser.add_argument('--use_cache', default=True, type=bool, help='use cache')
     parser.add_argument('--use_rgb', default=False, type=bool, help='use rgb')
     
@@ -204,7 +207,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--num-classes', default=9, type=int, help='num_classes')
 
-    parser.add_argument('-b', '--batch-size', default=1, type=int,
+    parser.add_argument('-b', '--batch-size', default=512, type=int,
                         help='images per gpu, the total batch size is $NGPU x batch_size')
 
     parser.add_argument('--start_epoch', default=0, type=int, help='start epoch')
