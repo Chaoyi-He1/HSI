@@ -47,15 +47,15 @@ if __name__ == "__main__":
         description=__doc__)
     
     parser.add_argument('--device', default='cuda', help='device')
-    parser.add_argument('--num-classes', default=1, type=int, help='num_classes')
+    parser.add_argument('--num-classes', default=9, type=int, help='num_classes')
     parser.add_argument('--img_type', default='OSP', help='image type: OSP or PCA or rgb')
     parser.add_argument('--output-dir', default='./Pixel_MLP/multi_train/OSP/', help='path where to save')
-    parser.add_argument('--resume', default='./Pixel_MLP/multi_train/OSP/model_008.pth', help='resume from checkpoint')
+    parser.add_argument('--resume', default='/data/chaoyi_he/HSI/EC_dataset/Pixel_MLP/multi_train/HSI_drive/OSP/model_299.pth', help='resume from checkpoint')
     
     parser.add_argument('--use_MF', default=True, type=bool, help='use MF')
     parser.add_argument('--use_dual', default=True, type=bool, help='use dual')
     parser.add_argument('--use_OSP', default=False, type=bool, help='use OSP')
-    parser.add_argument('--use_raw', default=True, type=bool, help='use raw')
+    parser.add_argument('--use_raw', default=False, type=bool, help='use raw')
     parser.add_argument('--use_cache', default=True, type=bool, help='use cache')
     parser.add_argument('--use_rgb', default=False, type=bool, help='use rgb')
     

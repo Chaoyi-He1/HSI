@@ -180,7 +180,7 @@ def main(args):
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print('Training time {}'.format(total_time_str))
     
-    atten_weights = model_without_ddp.atten.cpu().numpy()
+    atten_weights = model_without_ddp.atten.detach().cpu().numpy()
     np.savetxt('atten_weights_large_mlp.csv', atten_weights, delimiter=',')
     
 
