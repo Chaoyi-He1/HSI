@@ -15,18 +15,13 @@ def criterion(inputs, target, model, num_classes=6):
     accuracy = torch.mean(((inputs > 0) == target.byte()).float()) if inputs.shape[-1] <= 1 \
         else torch.mean((inputs.argmax(-1) == target).float())
     
-    # L1 norm for model.atten
-    L1_norm = 0.8 * torch.mean(torch.abs(model.module.atten))
+    # # L1 norm for model.atten
+    # L1_norm = 0.6 * torch.mean(torch.abs(model.module.atten))
     
-    # Return losses with L1_norm if model is in training mode
-    if model.module.training:
-        if model.module.atten.requires_grad:
-            return losses + L1_norm, accuracy
-        else:
-            return losses, accuracy
-    else:
-        return losses, accuracy
-    # return losses, accuracy
+    # # Return losses with L1_norm if model is in training mode
+    # if model.module.training and model.module.atten.requires_grad:
+    #     return losses + L1_norm, accuracy
+    return losses, accuracy
 
 
 def evaluate(model, data_loader, device, num_classes, scaler=None, epoch=0):

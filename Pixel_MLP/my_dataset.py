@@ -540,13 +540,18 @@ class HSI_Drive(data.Dataset):
 
 class HSI_Drive_V1(data.Dataset):
     def __init__(self, data_path: str = "", use_MF: bool = True, use_dual: bool = True,
-                 use_OSP: bool = True, use_raw: bool = False, use_rgb: bool = False, use_cache: bool = False):
+                 use_OSP: bool = True, use_raw: bool = False, use_rgb: bool = False, use_cache: bool = False,
+                 use_attention: bool = False, use_large_mlp: bool = False, num_attention: int = 10):
         self.use_MF = use_MF
         self.use_dual = use_dual
         self.use_OSP = use_OSP
         self.use_raw = use_raw
         self.use_rgb = use_rgb
         self.use_cache = use_cache
+        
+        self.use_attention = use_attention
+        self.use_large_mlp = use_large_mlp
+        self.num_attention = num_attention
         
         self.data_folder_path = os.path.join(data_path, "cubes_float32")
         if not use_raw:
@@ -623,6 +628,10 @@ class HSI_Drive_V1(data.Dataset):
                 img = img[:, [60, 44, 17, 27, 53, 4, 1, 20, 71, 13]]
             elif self.use_OSP and self.use_dual and not self.use_raw and not self.use_rgb:
                 img = img[:, [42, 34, 16, 230, 95, 243, 218, 181, 11, 193]]
+            elif self.use_attention and self.use_dual and not self.use_raw and not self.use_rgb:
+                attention_index = [108, 126, 4, 94, 32, 14, 243, 18, 86, 245] if self.use_large_mlp \
+                    else [202, 250, 140, 212, 4, 169, 76, 58, 205, 14]
+                img = img[:, attention_index[:self.num_attention]]
             
             for p in range(img.shape[0]):
                 data_dict[label[p]].append(img[p])
@@ -661,6 +670,10 @@ class HSI_Drive_V1(data.Dataset):
                 img = img[:, [60, 44, 17, 27, 53, 4, 1, 20, 71, 13]]
             elif self.use_OSP and self.use_dual and not self.use_raw and not self.use_rgb:
                 img = img[:, [42, 34, 16, 230, 95, 243, 218, 181, 11, 193]]
+            elif self.use_attention and self.use_dual and not self.use_raw and not self.use_rgb:
+                attention_index = [108, 126, 4, 94, 32, 14, 243, 18, 86, 245] if self.use_large_mlp \
+                    else [202, 250, 140, 212, 4, 169, 76, 58, 205, 14]
+                img = img[:, attention_index[:self.num_attention]]
             
             img = torch.from_numpy(img).to(dtype=torch.float32)
             label = torch.from_numpy(label).to(dtype=int)

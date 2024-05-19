@@ -38,7 +38,10 @@ def main(args):
                                  use_OSP=args.use_OSP,
                                  use_raw=args.use_raw,
                                  use_cache=args.use_cache,
-                                 use_rgb=args.use_rgb,)
+                                 use_rgb=args.use_rgb,
+                                 use_attention=args.use_attention,
+                                 use_large_mlp=args.use_large_mlp,
+                                 num_attention=args.num_attention,)
     
     if not args.use_cache:
         train_dataset, val_dataset = stratified_split(whole_dataset, train_ratio=0.8)
@@ -52,7 +55,10 @@ def main(args):
                                      use_OSP=args.use_OSP,
                                      use_raw=args.use_raw,
                                      use_cache=False,
-                                     use_rgb=args.use_rgb,)
+                                     use_rgb=args.use_rgb,
+                                     use_attention=args.use_attention,
+                                     use_large_mlp=args.use_large_mlp,
+                                     num_attention=args.num_attention,)
         
         val_dataset, _ = stratified_split(whole_img_dataset, train_ratio=0.8)
     
@@ -78,6 +84,8 @@ def main(args):
         in_chans = 3
     elif args.use_OSP:
         in_chans = 10
+    elif args.use_attention:
+        in_chans = args.num_attention
     elif not args.use_OSP and args.use_dual and not args.use_raw:
         in_chans = 252
     elif not args.use_OSP and not args.use_dual and not args.use_raw:
@@ -180,8 +188,8 @@ def main(args):
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print('Training time {}'.format(total_time_str))
     
-    atten_weights = model_without_ddp.atten.detach().cpu().numpy()
-    np.savetxt('atten_weights_lite_mlp.csv', atten_weights, delimiter=',')
+    # atten_weights = model_without_ddp.atten.detach().cpu().numpy()
+    # np.savetxt('atten_weights_lite_mlp.csv', atten_weights, delimiter=',')
     
 
 if __name__ == "__main__":
@@ -200,6 +208,10 @@ if __name__ == "__main__":
     parser.add_argument('--use_raw', default=False, type=bool, help='use raw')
     parser.add_argument('--use_cache', default=True, type=bool, help='use cache')
     parser.add_argument('--use_rgb', default=False, type=bool, help='use rgb')
+    
+    parser.add_argument('--use_attention', default=True, type=bool, help='use attention')
+    parser.add_argument('--use_large_mlp', default=False, type=bool, help='use large mlp')
+    parser.add_argument('--num_attention', default=10, type=int, help='num_attention')
     
     parser.add_argument('--use_sr', default=False, type=bool, help='use sr')
 
