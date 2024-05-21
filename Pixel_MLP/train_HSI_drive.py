@@ -1,7 +1,7 @@
 import time
 import os
 import datetime
-
+import random
 import torch
 
 from src import get_model
@@ -25,6 +25,12 @@ def main(args):
         tb_writer = SummaryWriter(log_dir="runs/HSI_drive/9 cls/Dual_HVI_attention/{}".format(datetime.datetime.now().strftime('%Y%m%d-%H%M%S')))
 
     device = torch.device(args.device)
+    
+    # fix the seed for reproducibility
+    seed = 42
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
 
     num_classes = args.num_classes
 
