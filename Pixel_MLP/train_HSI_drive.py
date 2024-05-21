@@ -27,10 +27,10 @@ def main(args):
     device = torch.device(args.device)
     
     # fix the seed for reproducibility
-    seed = 42
-    torch.manual_seed(seed)
-    np.random.seed(seed)
-    random.seed(seed)
+    # seed = 42
+    # torch.manual_seed(seed)
+    # np.random.seed(seed)
+    # random.seed(seed)
 
     num_classes = args.num_classes
 
