@@ -629,7 +629,7 @@ class HSI_Drive_V1(data.Dataset):
             elif self.use_OSP and self.use_dual and not self.use_raw and not self.use_rgb:
                 img = img[:, [42, 34, 16, 230, 95, 243, 218, 181, 11, 193]]
             elif self.use_attention and self.use_dual and not self.use_raw and not self.use_rgb:
-                attention_index = [108, 126, 4, 94, 32, 14, 243, 18, 86, 245] if self.use_large_mlp \
+                attention_index = [193, 181, 169, 163, 175, 187, 58, 223, 184, 40] if self.use_large_mlp \
                     else [202, 250, 140, 212, 4, 169, 76, 58, 205, 14]
                 img = img[:, attention_index[:self.num_attention]]
             
@@ -671,7 +671,7 @@ class HSI_Drive_V1(data.Dataset):
             elif self.use_OSP and self.use_dual and not self.use_raw and not self.use_rgb:
                 img = img[:, [42, 34, 16, 230, 95, 243, 218, 181, 11, 193]]
             elif self.use_attention and self.use_dual and not self.use_raw and not self.use_rgb:
-                attention_index = [108, 126, 4, 94, 32, 14, 243, 18, 86, 245] if self.use_large_mlp \
+                attention_index = [193, 181, 169, 163, 175, 187, 58, 223, 184, 40] if self.use_large_mlp \
                     else [202, 250, 140, 212, 4, 169, 76, 58, 205, 14]
                 img = img[:, attention_index[:self.num_attention]]
             

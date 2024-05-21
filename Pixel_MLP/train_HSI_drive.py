@@ -195,7 +195,7 @@ def main(args):
     print('Training time {}'.format(total_time_str))
     
     # atten_weights = model_without_ddp.atten.detach().cpu().numpy()
-    # np.savetxt('atten_weights_lite_mlp.csv', atten_weights, delimiter=',')
+    # np.savetxt('atten_weights_large_mlp.csv', atten_weights, delimiter=',')
     
 
 if __name__ == "__main__":
@@ -216,7 +216,7 @@ if __name__ == "__main__":
     parser.add_argument('--use_rgb', default=False, type=bool, help='use rgb')
     
     parser.add_argument('--use_attention', default=True, type=bool, help='use attention')
-    parser.add_argument('--use_large_mlp', default=False, type=bool, help='use large mlp')
+    parser.add_argument('--use_large_mlp', default=True, type=bool, help='use large mlp')
     parser.add_argument('--num_attention', default=10, type=int, help='num_attention')
     
     parser.add_argument('--use_sr', default=False, type=bool, help='use sr')
