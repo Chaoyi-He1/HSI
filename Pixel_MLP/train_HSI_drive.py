@@ -22,7 +22,7 @@ def main(args):
     if args.rank in [-1, 0]:
         print('Start Tensorboard with "tensorboard --logdir=runs", view at http://localhost:6006/')
         # Save tb_writer to runs/HSI_drive/times
-        tb_writer = SummaryWriter(log_dir="runs/HSI_drive/9 cls/Dual_HVI_attention/{}".format(datetime.datetime.now().strftime('%Y%m%d-%H%M%S')))
+        tb_writer = SummaryWriter(log_dir="runs/HSI_drive/9 cls/RGB/{}".format(datetime.datetime.now().strftime('%Y%m%d-%H%M%S')))
 
     device = torch.device(args.device)
     
@@ -56,17 +56,17 @@ def main(args):
     
     if args.use_sr:
         whole_img_dataset = HSI_Drive_V1(data_path=args.data_path,
-                                     use_MF=args.use_MF,
-                                     use_dual=args.use_dual,
-                                     use_OSP=args.use_OSP,
-                                     use_raw=args.use_raw,
-                                     use_cache=False,
-                                     use_rgb=args.use_rgb,
-                                     use_attention=args.use_attention,
-                                     use_large_mlp=args.use_large_mlp,
-                                     num_attention=args.num_attention,)
+                                         use_MF=args.use_MF,
+                                         use_dual=args.use_dual,
+                                         use_OSP=args.use_OSP,
+                                         use_raw=args.use_raw,
+                                         use_cache=False,
+                                         use_rgb=args.use_rgb,
+                                         use_attention=args.use_attention,
+                                         use_large_mlp=args.use_large_mlp,
+                                         num_attention=args.num_attention,)
         
-        val_dataset, _ = stratified_split(whole_img_dataset, train_ratio=0.8)
+        _, val_dataset = stratified_split(whole_img_dataset, train_ratio=0.8)
     
     if args.distributed:
         train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
@@ -89,7 +89,7 @@ def main(args):
     if args.use_rgb:
         in_chans = 3
     elif args.use_OSP:
-        in_chans = 10
+        in_chans = args.num_attention
     elif args.use_attention:
         in_chans = args.num_attention
     elif not args.use_OSP and args.use_dual and not args.use_raw:
@@ -152,6 +152,11 @@ def main(args):
                 loss_val, acc_val, confusion_mtx_val  = evaluate_sr(model, val_data_loader, device=device, num_classes=num_classes, scaler=scaler, epoch=epoch)
             else:
                 loss_val, acc_val, confusion_mtx_val, confusion_mtx_val_sr = evaluate_sr(model, val_data_loader, device=device, num_classes=num_classes, scaler=scaler, epoch=epoch)
+        elif args.cal_IoU:
+            loss_val, acc_val, confusion_mtx_val, confmat = evaluate(model, val_data_loader, device=device, num_classes=num_classes, scaler=scaler, epoch=epoch, cal_IoU=args.cal_IoU)
+            acc_global, acc, iu = confmat.compute()
+            val_info = str(confmat)
+            print(val_info)
         else:
             loss_val, acc_val, confusion_mtx_val = evaluate(model, val_data_loader, device=device, num_classes=num_classes, scaler=scaler, epoch=epoch)
 
@@ -159,7 +164,15 @@ def main(args):
         if args.rank in [-1, 0]:
             if tb_writer:
                 tags = ['train_loss', 'train_acc', 'val_loss', 'val_acc']
-                values = [mean_loss, mean_acc, loss_val, acc_val,]
+                values = [mean_loss, mean_acc, loss_val, acc_val]
+                
+                if args.cal_IoU:
+                    tags += ['IoU/Road', 'IoU/Road marks', 'IoU/Vegetation', 'IoU/Painted Metal',
+                             'IoU/Sky', 'IoU/Concrete or Stone or Brick', 'IoU/Pedestrian or Cyclist',
+                             'IoU/Unpainted Metal', 'IoU/Glass or Transparent Plastic',
+                             'mean_IoU']
+                    values += [i for i in (iu * 100).tolist()] + [iu.mean().item() * 100]
+                
                 for x, tag in zip(values, tags):
                     tb_writer.add_scalar(tag, x, epoch)
                 # add confusion matrix to tensorboard
@@ -213,13 +226,14 @@ if __name__ == "__main__":
     parser.add_argument('--use_OSP', default=False, type=bool, help='use OSP')
     parser.add_argument('--use_raw', default=False, type=bool, help='use raw')
     parser.add_argument('--use_cache', default=True, type=bool, help='use cache')
-    parser.add_argument('--use_rgb', default=False, type=bool, help='use rgb')
+    parser.add_argument('--use_rgb', default=True, type=bool, help='use rgb')
     
-    parser.add_argument('--use_attention', default=True, type=bool, help='use attention')
-    parser.add_argument('--use_large_mlp', default=True, type=bool, help='use large mlp')
-    parser.add_argument('--num_attention', default=10, type=int, help='num_attention')
+    parser.add_argument('--use_attention', default=False, type=bool, help='use attention')
+    parser.add_argument('--use_large_mlp', default=False, type=bool, help='use large mlp')
+    parser.add_argument('--num_attention', default=3, type=int, help='num_attention')
     
     parser.add_argument('--use_sr', default=False, type=bool, help='use sr')
+    parser.add_argument('--cal_IoU', default=True, type=bool, help='calculate IoU')
 
     parser.add_argument('--device', default='cuda', help='device')
 

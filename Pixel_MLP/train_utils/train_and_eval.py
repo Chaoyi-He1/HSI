@@ -27,9 +27,10 @@ def criterion(inputs, target, model, num_classes=6):
     return losses, accuracy
 
 
-def evaluate(model, data_loader, device, num_classes, scaler=None, epoch=0):
+def evaluate(model, data_loader, device, num_classes, scaler=None, epoch=0, IoU=False):
     model.eval()
     metric_logger = utils.MetricLogger(delimiter="  ")
+    confmat = utils.ConfusionMatrix(num_classes, device)
     metric_logger.add_meter('acc', utils.SmoothedValue(window_size=100, fmt='{value:.6f}'))
     metric_logger.add_meter('loss', utils.SmoothedValue(window_size=100, fmt='{value:.6f}'))
     header = 'Test:'
@@ -46,8 +47,12 @@ def evaluate(model, data_loader, device, num_classes, scaler=None, epoch=0):
             all_labels.append(target.view(-1, 1).cpu().numpy())
             
             metric_logger.update(loss=loss.item(), acc=acc.item())
+            if IoU:
+                confmat.update(target.flatten(), output.argmax(-1).flatten())
     
     metric_logger.synchronize_between_processes()
+    if IoU:
+        confmat.reduce_from_all_processes()
     print("Averaged stats:", metric_logger)
     
     all_preds, all_labels = np.vstack(all_preds), np.vstack(all_labels)
@@ -70,7 +75,9 @@ def evaluate(model, data_loader, device, num_classes, scaler=None, epoch=0):
     plt.figure(figsize=(12, 10))
     fig = sn.heatmap(df_cm, annot=True).get_figure()
     
-    return metric_logger.meters['loss'].global_avg, metric_logger.meters['acc'].global_avg, fig
+    if not IoU:
+        return metric_logger.meters['loss'].global_avg, metric_logger.meters['acc'].global_avg, fig
+    return metric_logger.meters['loss'].global_avg, metric_logger.meters['acc'].global_avg, fig, confmat
 
 
 def evaluate_sr(model, data_loader, device, num_classes, scaler=None, epoch=0):

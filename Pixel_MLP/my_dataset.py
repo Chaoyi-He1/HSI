@@ -625,9 +625,11 @@ class HSI_Drive_V1(data.Dataset):
             label = label[label != 255]
             
             if self.use_OSP and not self.use_dual and not self.use_raw and not self.use_rgb:
-                img = img[:, [60, 44, 17, 27, 53, 4, 1, 20, 71, 13]]
+                OSP_index = [60, 44, 17, 27, 53, 4, 1, 20, 71, 13]
+                img = img[:, OSP_index[:self.num_attention]]
             elif self.use_OSP and self.use_dual and not self.use_raw and not self.use_rgb:
-                img = img[:, [42, 34, 16, 230, 95, 243, 218, 181, 11, 193]]
+                OSP_index = [42, 34, 16, 230, 95, 243, 218, 181, 11, 193]
+                img = img[:, OSP_index[:self.num_attention]]
             elif self.use_attention and self.use_dual and not self.use_raw and not self.use_rgb:
                 attention_index = [193, 181, 169, 163, 175, 187, 58, 223, 184, 40] if self.use_large_mlp \
                     else [202, 250, 140, 212, 4, 169, 76, 58, 205, 14]
@@ -667,9 +669,11 @@ class HSI_Drive_V1(data.Dataset):
             label = label.reshape(-1)
             
             if self.use_OSP and not self.use_dual and not self.use_raw and not self.use_rgb:
-                img = img[:, [60, 44, 17, 27, 53, 4, 1, 20, 71, 13]]
+                OSP_index = [60, 44, 17, 27, 53, 4, 1, 20, 71, 13]
+                img = img[:, OSP_index[:self.num_attention]]
             elif self.use_OSP and self.use_dual and not self.use_raw and not self.use_rgb:
-                img = img[:, [42, 34, 16, 230, 95, 243, 218, 181, 11, 193]]
+                OSP_index = [42, 34, 16, 230, 95, 243, 218, 181, 11, 193]
+                img = img[:, OSP_index[:self.num_attention]]
             elif self.use_attention and self.use_dual and not self.use_raw and not self.use_rgb:
                 attention_index = [193, 181, 169, 163, 175, 187, 58, 223, 184, 40] if self.use_large_mlp \
                     else [202, 250, 140, 212, 4, 169, 76, 58, 205, 14]
