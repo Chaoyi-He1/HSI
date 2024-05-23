@@ -19,9 +19,9 @@ def criterion(inputs, target, model, num_classes=6):
     # L1_norm = 0.6 * torch.mean(torch.abs(model.module.atten))
     
     # Return losses with L1_norm if model is in training mode and atten exists
-    if model.module.training and hasattr(model.module, 'atten'):
-        L1_norm = 0.6 * torch.mean(torch.abs(model.module.atten))
-        num_ones = torch.sum(torch.abs(model.module.atten))
+    if model.training and hasattr(model, 'atten'):
+        L1_norm = 0.6 * torch.mean(torch.abs(model.atten))
+        num_ones = torch.sum(torch.abs(model.atten))
         deviation = torch.abs(num_ones - 10)
         return losses + L1_norm + deviation, accuracy
     return losses, accuracy

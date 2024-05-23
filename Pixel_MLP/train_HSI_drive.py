@@ -17,12 +17,12 @@ def create_model(model_name="mlp_pixel", num_classes=2, in_chans=10):
     return model
 
 def main(args):
-    init_distributed_mode(args)
+    # init_distributed_mode(args)
     print(args)
-    if args.rank in [-1, 0]:
-        print('Start Tensorboard with "tensorboard --logdir=runs", view at http://localhost:6006/')
-        # Save tb_writer to runs/HSI_drive/times
-        tb_writer = SummaryWriter(log_dir="runs/HSI_drive/9 cls/RGB/{}".format(datetime.datetime.now().strftime('%Y%m%d-%H%M%S')))
+    # if args.rank in [-1, 0]:
+    print('Start Tensorboard with "tensorboard --logdir=runs", view at http://localhost:6006/')
+    # Save tb_writer to runs/HSI_drive/times
+    tb_writer = SummaryWriter(log_dir="runs/HSI_drive/9 cls/Dual_OSP/{}".format(datetime.datetime.now().strftime('%Y%m%d-%H%M%S')))
 
     device = torch.device(args.device)
     
@@ -68,12 +68,12 @@ def main(args):
         
         _, val_dataset = stratified_split(whole_img_dataset, train_ratio=0.8)
     
-    if args.distributed:
-        train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
-        test_sampler = torch.utils.data.distributed.DistributedSampler(val_dataset)
-    else:
-        train_sampler = torch.utils.data.RandomSampler(train_dataset)
-        test_sampler = torch.utils.data.SequentialSampler(val_dataset)
+    # if args.distributed:
+    #     train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
+    #     test_sampler = torch.utils.data.distributed.DistributedSampler(val_dataset)
+    # else:
+    train_sampler = torch.utils.data.RandomSampler(train_dataset)
+    test_sampler = torch.utils.data.SequentialSampler(val_dataset)
 
     train_data_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=args.batch_size,
@@ -104,13 +104,13 @@ def main(args):
     num_parameters, num_layers = sum(p.numel() for p in model.parameters() if p.requires_grad), len(list(model.parameters()))
     print(f"Number of parameters: {num_parameters}, number of layers: {num_layers}")
 
-    if args.sync_bn:
-        model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
+    # if args.sync_bn:
+    #     model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
 
     model_without_ddp = model
-    if args.distributed:
-        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
-        model_without_ddp = model.module
+    # if args.distributed:
+    #     model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
+    #     model_without_ddp = model.module
 
     params_to_optimize = [p for p in model.parameters() if p.requires_grad]
 
@@ -141,8 +141,8 @@ def main(args):
     print("Start training")
     start_time = time.time()
     for epoch in range(args.start_epoch, args.epochs + args.start_epoch):
-        if args.distributed:
-            train_sampler.set_epoch(epoch)
+        # if args.distributed:
+        #     train_sampler.set_epoch(epoch)
         mean_loss, mean_acc, lr, confusion_mtx = train_one_epoch(model, optimizer, train_data_loader, device, epoch,
                                                                  lr_scheduler=lr_scheduler, print_freq=args.print_freq, 
                                                                  scaler=scaler, num_classes=num_classes)
@@ -153,41 +153,40 @@ def main(args):
             else:
                 loss_val, acc_val, confusion_mtx_val, confusion_mtx_val_sr = evaluate_sr(model, val_data_loader, device=device, num_classes=num_classes, scaler=scaler, epoch=epoch)
         elif args.cal_IoU:
-            loss_val, acc_val, confusion_mtx_val, confmat = evaluate(model, val_data_loader, device=device, num_classes=num_classes, scaler=scaler, epoch=epoch, cal_IoU=args.cal_IoU)
+            loss_val, acc_val, confusion_mtx_val, confmat = evaluate(model, val_data_loader, device=device, num_classes=num_classes, scaler=scaler, epoch=epoch, IoU=args.cal_IoU)
             acc_global, acc, iu = confmat.compute()
             val_info = str(confmat)
             print(val_info)
         else:
             loss_val, acc_val, confusion_mtx_val = evaluate(model, val_data_loader, device=device, num_classes=num_classes, scaler=scaler, epoch=epoch)
 
-        # 只在主进程上进行写操作
-        if args.rank in [-1, 0]:
-            if tb_writer:
-                tags = ['train_loss', 'train_acc', 'val_loss', 'val_acc']
-                values = [mean_loss, mean_acc, loss_val, acc_val]
+        # if args.rank in [-1, 0]:
+        if tb_writer:
+            tags = ['train_loss', 'train_acc', 'val_loss', 'val_acc']
+            values = [mean_loss, mean_acc, loss_val, acc_val]
+            
+            if args.cal_IoU:
+                tags += ['IoU/Road', 'IoU/Road marks', 'IoU/Vegetation', 'IoU/Painted Metal',
+                            'IoU/Sky', 'IoU/Concrete or Stone or Brick', 'IoU/Pedestrian or Cyclist',
+                            'IoU/Unpainted Metal', 'IoU/Glass or Transparent Plastic',
+                            'mean_IoU']
+                values += [i for i in (iu * 100).tolist()] + [iu.mean().item() * 100]
+            
+            for x, tag in zip(values, tags):
+                tb_writer.add_scalar(tag, x, epoch)
+            # add confusion matrix to tensorboard
+            tb_writer.add_figure('confusion_matrix', confusion_mtx, epoch)
+            tb_writer.add_figure('confusion_matrix_val', confusion_mtx_val, epoch)
+            if epoch > 290 and args.use_sr:
+                tb_writer.add_figure('confusion_matrix_val_sr', confusion_mtx_val_sr, epoch)
                 
-                if args.cal_IoU:
-                    tags += ['IoU/Road', 'IoU/Road marks', 'IoU/Vegetation', 'IoU/Painted Metal',
-                             'IoU/Sky', 'IoU/Concrete or Stone or Brick', 'IoU/Pedestrian or Cyclist',
-                             'IoU/Unpainted Metal', 'IoU/Glass or Transparent Plastic',
-                             'mean_IoU']
-                    values += [i for i in (iu * 100).tolist()] + [iu.mean().item() * 100]
-                
-                for x, tag in zip(values, tags):
-                    tb_writer.add_scalar(tag, x, epoch)
-                # add confusion matrix to tensorboard
-                tb_writer.add_figure('confusion_matrix', confusion_mtx, epoch)
-                tb_writer.add_figure('confusion_matrix_val', confusion_mtx_val, epoch)
-                if epoch > 290 and args.use_sr:
-                    tb_writer.add_figure('confusion_matrix_val_sr', confusion_mtx_val_sr, epoch)
-                    
-            # write into txt
-            with open(results_file, "a") as f:
-                # 记录每个epoch对应的train_loss、lr以及验证集各指标
-                train_info = f"[epoch: {epoch}]\n" \
-                             f"train_loss: {mean_loss:.4f}\n" \
-                             f"lr: {lr:.6f}\n"
-                f.write(train_info + "\n\n")
+        # write into txt
+        with open(results_file, "a") as f:
+            # 记录每个epoch对应的train_loss、lr以及验证集各指标
+            train_info = f"[epoch: {epoch}]\n" \
+                            f"train_loss: {mean_loss:.4f}\n" \
+                            f"lr: {lr:.6f}\n"
+            f.write(train_info + "\n\n")
 
         if args.output_dir:
             # 只在主节点上执行保存权重操作
@@ -199,9 +198,8 @@ def main(args):
             if args.amp:
                 save_file["scaler"] = scaler.state_dict()
             digits = len(str(args.epochs))
-            save_on_master(save_file,
-                           os.path.join(args.output_dir, 'model_{}.pth'.format(
-                            str(epoch).zfill(digits))))
+            torch.save(save_file,
+                       os.path.join(args.output_dir, 'model_{}.pth'.format(str(epoch).zfill(digits))))
 
     total_time = time.time() - start_time
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
@@ -226,7 +224,7 @@ if __name__ == "__main__":
     parser.add_argument('--use_OSP', default=False, type=bool, help='use OSP')
     parser.add_argument('--use_raw', default=False, type=bool, help='use raw')
     parser.add_argument('--use_cache', default=True, type=bool, help='use cache')
-    parser.add_argument('--use_rgb', default=True, type=bool, help='use rgb')
+    parser.add_argument('--use_rgb', default=False, type=bool, help='use rgb')
     
     parser.add_argument('--use_attention', default=False, type=bool, help='use attention')
     parser.add_argument('--use_large_mlp', default=False, type=bool, help='use large mlp')
