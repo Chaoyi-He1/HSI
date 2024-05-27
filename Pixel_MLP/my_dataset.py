@@ -703,6 +703,370 @@ class HSI_Drive_V1(data.Dataset):
         # print(f"Max label: {torch.max(batched_targets[batched_targets != 255])}, Min label: {torch.min(batched_targets[batched_targets != 255])}")
         return batched_imgs, batched_targets, batched_img_pos
 
+
+class HSI_Drive_V1_(data.Dataset):
+    def __init__(self, data_path: str = "", use_MF: bool = True, use_dual: bool = True,
+                 use_OSP: bool = True, use_raw: bool = False, use_rgb: bool = False, use_cache: bool = False,
+                 use_attention: bool = False, use_large_mlp: bool = False, num_attention: int = 10):
+        self.use_MF = use_MF
+        self.use_dual = use_dual
+        self.use_OSP = use_OSP
+        self.use_raw = use_raw
+        self.use_rgb = use_rgb
+        self.use_cache = use_cache
+        
+        self.use_attention = use_attention
+        self.use_large_mlp = use_large_mlp
+        self.num_attention = num_attention
+        
+        self.data_folder_path = os.path.join(data_path, "cubes_float32")
+        if not use_raw:
+            self.data_folder_path = os.path.join(self.data_folder_path, "Dual_HVI") if use_dual else os.path.join(self.data_folder_path, "Sin_HVI")
+        
+        path_ext = ""
+        
+        if use_raw:
+            path_ext += ""
+        elif use_dual and not use_raw:
+            path_ext += "/Dual_HVI"
+        elif not use_dual and not use_raw:
+            path_ext += "/Sin_HVI"
+        
+        name_ext = "_MF_TC_N_fl32"
+        
+        self.data_paths = [os.path.join(self.data_folder_path, file) for file in os.listdir(self.data_folder_path) if file.endswith(".mat")]
+        self.label_paths = [file.replace("cubes_float32", "labels").replace(path_ext, "").replace(name_ext, "").replace(".mat", ".png") for file in self.data_paths]
+        self.rgb_paths = [file.replace("cubes_float32", "RGB").replace(path_ext, "").replace(name_ext, "_color").replace(".mat", ".png") for file in self.data_paths]
+        self.end_label_paths = [file.replace("cubes_float32", "end_labels").replace(path_ext, "").replace(name_ext, "").replace(".mat", ".png") for file in self.data_paths]
+        
+        for i in range(len(self.data_paths) - 1, -1, -1):
+            if not os.path.isfile(self.label_paths[i]):
+                del self.data_paths[i]
+                del self.label_paths[i]
+        
+        assert len(self.data_paths) == len(self.label_paths) and len(self.data_paths) > 0, "The number of data files and label files are not equal."
+
+        self.hsi_drive_original_label = {
+            0: "Unlabeled",
+            1: "Road",
+            2: "Road marks",
+            3: "Vegetation",
+            4: "Painted Metal",
+            5: "Sky",
+            6: "Concrete/Stone/Brick",
+            7: "Pedestrian/Cyclist",
+            8: "Water",
+            9: "Unpainted Metal",
+            10: "Glass/Transparent Plastic",
+        }
+        self.selected_labels = [1, 2, 3, 4, 5, 6, 7, 9, 10]
+        if use_cache:
+            self.cache_data()
+        
+    def relabeling(self, label, end_label):
+        for k, v in self.hsi_drive_original_label.items():
+            if k not in self.selected_labels:
+                label[label == k] = 255
+        # relabel the label from 0 to end, with 255 as the background
+        for i, k in enumerate(self.selected_labels):
+            # relabel the label matrix from 0 to end where in end_label has the same label, otherwise, label it as 255
+            # if end_label and label have no common label, then dont consider end_label
+            if k not in end_label:
+                label[label == k] = i
+            else:
+                relabel_index = (end_label == k) & (label == k)
+                label[relabel_index] = i
+                ignore_index = (end_label != k) & (label == k)
+                label[ignore_index] = 255
+        return label
+    
+    def cache_data(self):
+        data_dict = defaultdict(list)
+        for i in range(len(self.data_paths)):
+            if not self.use_rgb:
+                img = sio.loadmat(self.data_paths[i])["filtered_img"] if not self.use_raw else sio.loadmat(self.data_paths[i])["cube_fl32"]
+                img = img.transpose(1, 2, 0) if self.use_raw else img / 1e3
+            else:
+                img = np.array(Image.open(self.rgb_paths[i]))
+            
+            label = np.array(Image.open(self.label_paths[i]))
+            end_label = np.array(Image.open(self.end_label_paths[i]))
+            label = self.relabeling(label, end_label)
+            
+            img = img.reshape(-1, img.shape[-1])
+            label = label.reshape(-1)
+            
+            # remove 255 label
+            img = img[label != 255, :]
+            label = label[label != 255]
+            
+            if self.use_OSP and not self.use_dual and not self.use_raw and not self.use_rgb:
+                OSP_index = [60, 44, 17, 27, 53, 4, 1, 20, 71, 13]
+                img = img[:, OSP_index[:self.num_attention]]
+            elif self.use_OSP and self.use_dual and not self.use_raw and not self.use_rgb:
+                OSP_index = [42, 34, 16, 230, 95, 243, 218, 181, 11, 193]
+                img = img[:, OSP_index[:self.num_attention]]
+            elif self.use_attention and self.use_dual and not self.use_raw and not self.use_rgb:
+                attention_index = [163, 40, 58, 218, 4, 230, 76, 121, 176, 224] if self.use_large_mlp \
+                    else [223, 163, 58, 230, 40, 193, 145, 187, 248, 181]
+                img = img[:, attention_index[:self.num_attention]]
+            
+            for p in range(img.shape[0]):
+                data_dict[label[p]].append(img[p])
+        # print(len(data_dict[7]))
+        # randomly select 5000 samples from each class
+        data_dict_selected = {}
+        for k, v in data_dict.items():
+            v = np.array(v)
+            if len(v) > 50000:
+                data_dict_selected[k] = v[np.random.choice(len(v), 50000, replace=False), :]
+            else:
+                data_dict_selected[k] = v
+        del data_dict
+        # generate the data and label lists based on the data_dict
+        self.data_list = []
+        self.label_list = []
+        for k, v in data_dict_selected.items():
+            self.data_list.extend(v)
+            self.label_list.extend([k] * len(v))
+    
+    def __getitem__(self, index):
+        if not self.use_cache:
+            if not self.use_rgb:
+                img = sio.loadmat(self.data_paths[index])["filtered_img"] if not self.use_raw else sio.loadmat(self.data_paths[index])["cube_fl32"]
+                img = img.transpose(1, 2, 0) if self.use_raw else img / 1e3
+            else:
+                img = np.array(Image.open(self.rgb_paths[index]))
+                
+            label = np.array(Image.open(self.label_paths[index]))
+            end_label = np.array(Image.open(self.end_label_paths[index]))
+            label = self.relabeling(label, end_label)
+            img_pos = np.indices(img.shape[:2]).transpose(1, 2, 0)
+            
+            img = img.reshape(-1, img.shape[-1])
+            img_pos = img_pos.reshape(-1, 2)
+            label = label.reshape(-1)
+            
+            if self.use_OSP and not self.use_dual and not self.use_raw and not self.use_rgb:
+                OSP_index = [60, 44, 17, 27, 53, 4, 1, 20, 71, 13]
+                img = img[:, OSP_index[:self.num_attention]]
+            elif self.use_OSP and self.use_dual and not self.use_raw and not self.use_rgb:
+                OSP_index = [42, 34, 16, 230, 95, 243, 218, 181, 11, 193]
+                img = img[:, OSP_index[:self.num_attention]]
+            elif self.use_attention and self.use_dual and not self.use_raw and not self.use_rgb:
+                attention_index = [163, 40, 58, 218, 4, 230, 76, 121, 176, 224] if self.use_large_mlp \
+                    else [223, 163, 58, 230, 40, 193, 145, 187, 248, 181]
+                img = img[:, attention_index[:self.num_attention]]
+            
+            img = torch.from_numpy(img).to(dtype=torch.float32)
+            label = torch.from_numpy(label).to(dtype=int)
+        elif self.use_cache:
+            img = torch.from_numpy(self.data_list[index]).to(dtype=torch.float16)
+            label = torch.tensor(self.label_list[index], dtype=torch.int64)
+            img_pos = None
+
+        return img, label, img_pos
+    
+    def __len__(self):
+        return len(self.data_paths) if not self.use_cache else len(self.data_list)
+    
+    @staticmethod
+    def collate_fn(batch):
+        images, targets, img_pos = list(zip(*batch))
+        batched_imgs = torch.stack(images, dim=0)
+        batched_imgs = batched_imgs.flatten(0, 1) if len(batched_imgs.shape) == 3 else batched_imgs
+        batched_targets = torch.stack(targets, dim=0).to(dtype=torch.int64)
+        batched_targets = batched_targets.flatten(0, 1) if len(batched_targets.shape) == 2 else batched_targets
+        batched_img_pos = np.vstack(img_pos) if img_pos[0] is not None else None
+        # print max and min of label ignoring 255
+        # print(f"Max label: {torch.max(batched_targets[batched_targets != 255])}, Min label: {torch.min(batched_targets[batched_targets != 255])}")
+        return batched_imgs, batched_targets, batched_img_pos
+
+
+class HSI_Drive_V1_visual(data.Dataset):
+    def __init__(self, data_path: str = "", use_MF: bool = True, use_dual: bool = True,
+                 use_OSP: bool = True, use_raw: bool = False, use_rgb: bool = False, use_cache: bool = False,
+                 use_attention: bool = False, use_large_mlp: bool = False, num_attention: int = 10):
+        self.use_MF = use_MF
+        self.use_dual = use_dual
+        self.use_OSP = use_OSP
+        self.use_raw = use_raw
+        self.use_rgb = use_rgb
+        self.use_cache = use_cache
+        
+        self.use_attention = use_attention
+        self.use_large_mlp = use_large_mlp
+        self.num_attention = num_attention
+        
+        self.data_folder_path = os.path.join(data_path, "cubes_float32")
+        if not use_raw:
+            self.data_folder_path = os.path.join(self.data_folder_path, "Dual_HVI") if use_dual else os.path.join(self.data_folder_path, "Sin_HVI")
+        
+        path_ext = ""
+        
+        if use_raw:
+            path_ext += ""
+        elif use_dual and not use_raw:
+            path_ext += "/Dual_HVI"
+        elif not use_dual and not use_raw:
+            path_ext += "/Sin_HVI"
+        
+        name_ext = "_MF_TC_N_fl32"
+        
+        self.data_paths = [os.path.join(self.data_folder_path, file) for file in os.listdir(self.data_folder_path) if file.endswith(".mat")]
+        self.label_paths = [file.replace("cubes_float32", "labels").replace(path_ext, "").replace(name_ext, "").replace(".mat", ".png") for file in self.data_paths]
+        self.rgb_paths = [file.replace("cubes_float32", "RGB").replace(path_ext, "").replace(name_ext, "_color").replace(".mat", ".png") for file in self.data_paths]
+        self.end_label_paths = [file.replace("cubes_float32", "end_labels").replace(path_ext, "").replace(name_ext, "").replace(".mat", ".png") for file in self.data_paths]
+        
+        for i in range(len(self.data_paths) - 1, -1, -1):
+            if not os.path.isfile(self.label_paths[i]):
+                del self.data_paths[i]
+                del self.label_paths[i]
+        
+        assert len(self.data_paths) == len(self.label_paths) and len(self.data_paths) > 0, "The number of data files and label files are not equal."
+
+        self.hsi_drive_original_label = {
+            0: "Unlabeled",
+            1: "Road",
+            2: "Road marks",
+            3: "Vegetation",
+            4: "Painted Metal",
+            5: "Sky",
+            6: "Concrete/Stone/Brick",
+            7: "Pedestrian/Cyclist",
+            8: "Water",
+            9: "Unpainted Metal",
+            10: "Glass/Transparent Plastic",
+        }
+        self.selected_labels = [1, 2, 3, 4, 5, 6, 7, 9, 10]
+        if use_cache:
+            self.cache_data()
+        
+    def relabeling(self, label, end_label):
+        for k, v in self.hsi_drive_original_label.items():
+            if k not in self.selected_labels:
+                label[label == k] = 255
+        # relabel the label from 0 to end, with 255 as the background
+        for i, k in enumerate(self.selected_labels):
+            # relabel the label matrix from 0 to end where in end_label has the same label, otherwise, label it as 255
+            # if end_label and label have no common label, then dont consider end_label
+            if k not in end_label:
+                label[label == k] = i
+            else:
+                relabel_index = (end_label == k) & (label == k)
+                label[relabel_index] = i
+                ignore_index = (end_label != k) & (label == k)
+                label[ignore_index] = 255
+        return label
+    
+    def cache_data(self):
+        data_dict = defaultdict(list)
+        for i in range(len(self.data_paths)):
+            if not self.use_rgb:
+                img = sio.loadmat(self.data_paths[i])["filtered_img"] if not self.use_raw else sio.loadmat(self.data_paths[i])["cube_fl32"]
+                img = img.transpose(1, 2, 0) if self.use_raw else img / 1e3
+            else:
+                img = np.array(Image.open(self.rgb_paths[i]))
+            
+            label = np.array(Image.open(self.label_paths[i]))
+            end_label = np.array(Image.open(self.end_label_paths[i]))
+            label = self.relabeling(label, end_label)
+            
+            img = img.reshape(-1, img.shape[-1])
+            label = label.reshape(-1)
+            
+            # remove 255 label
+            img = img[label != 255, :]
+            label = label[label != 255]
+            
+            if self.use_OSP and not self.use_dual and not self.use_raw and not self.use_rgb:
+                OSP_index = [60, 44, 17, 27, 53, 4, 1, 20, 71, 13]
+                img = img[:, OSP_index[:self.num_attention]]
+            elif self.use_OSP and self.use_dual and not self.use_raw and not self.use_rgb:
+                OSP_index = [42, 34, 16, 230, 95, 243, 218, 181, 11, 193]
+                img = img[:, OSP_index[:self.num_attention]]
+            elif self.use_attention and self.use_dual and not self.use_raw and not self.use_rgb:
+                attention_index = [163, 40, 58, 218, 4, 230, 76, 121, 176, 224] if self.use_large_mlp \
+                    else [223, 163, 58, 230, 40, 193, 145, 187, 248, 181]
+                img = img[:, attention_index[:self.num_attention]]
+            
+            for p in range(img.shape[0]):
+                data_dict[label[p]].append(img[p])
+        # print(len(data_dict[7]))
+        # randomly select 5000 samples from each class
+        data_dict_selected = {}
+        for k, v in data_dict.items():
+            v = np.array(v)
+            if len(v) > 50000:
+                data_dict_selected[k] = v[np.random.choice(len(v), 50000, replace=False), :]
+            else:
+                data_dict_selected[k] = v
+        del data_dict
+        # generate the data and label lists based on the data_dict
+        self.data_list = []
+        self.label_list = []
+        for k, v in data_dict_selected.items():
+            self.data_list.extend(v)
+            self.label_list.extend([k] * len(v))
+    
+    def __getitem__(self, index):
+        if not self.use_cache:
+            if not self.use_rgb:
+                img = sio.loadmat(self.data_paths[index])["filtered_img"] if not self.use_raw else sio.loadmat(self.data_paths[index])["cube_fl32"]
+                img = img.transpose(1, 2, 0) if self.use_raw else img / 1e3
+            else:
+                img = np.array(Image.open(self.rgb_paths[index]))
+            rgb_img = np.array(Image.open(self.rgb_paths[index]))
+            
+            label = np.array(Image.open(self.label_paths[index]))
+            end_label = np.array(Image.open(self.end_label_paths[index]))
+            label = self.relabeling(label, end_label)
+            img_pos = np.indices(img.shape[:2]).transpose(1, 2, 0)
+            
+            img = img.reshape(-1, img.shape[-1])
+            img_pos = img_pos.reshape(-1, 2)
+            rgb_img = rgb_img.reshape(-1, 3)
+            label = label.reshape(-1)
+            
+            if self.use_OSP and not self.use_dual and not self.use_raw and not self.use_rgb:
+                OSP_index = [60, 44, 17, 27, 53, 4, 1, 20, 71, 13]
+                img = img[:, OSP_index[:self.num_attention]]
+            elif self.use_OSP and self.use_dual and not self.use_raw and not self.use_rgb:
+                OSP_index = [42, 34, 16, 230, 95, 243, 218, 181, 11, 193]
+                img = img[:, OSP_index[:self.num_attention]]
+            elif self.use_attention and self.use_dual and not self.use_raw and not self.use_rgb:
+                attention_index = [163, 40, 58, 218, 4, 230, 76, 121, 176, 224] if self.use_large_mlp \
+                    else [223, 163, 58, 230, 40, 193, 145, 187, 248, 181]
+                img = img[:, attention_index[:self.num_attention]]
+            
+            img = torch.from_numpy(img).to(dtype=torch.float32)
+            label = torch.from_numpy(label).to(dtype=int)
+        elif self.use_cache:
+            img = torch.from_numpy(self.data_list[index]).to(dtype=torch.float16)
+            label = torch.tensor(self.label_list[index], dtype=torch.int64)
+            img_pos = None
+
+        # get the label file name
+        label_name = self.label_paths[index].split("/")[-1].split(".")[0]
+        return img, label, img_pos, rgb_img, label_name
+    
+    def __len__(self):
+        return len(self.data_paths) if not self.use_cache else len(self.data_list)
+    
+    @staticmethod
+    def collate_fn(batch):
+        images, targets, img_pos, rgb_img, label_name = list(zip(*batch))
+        batched_imgs = torch.stack(images, dim=0)
+        batched_imgs = batched_imgs.flatten(0, 1) if len(batched_imgs.shape) == 3 else batched_imgs
+        batched_targets = torch.stack(targets, dim=0).to(dtype=torch.int64)
+        batched_targets = batched_targets.flatten(0, 1) if len(batched_targets.shape) == 2 else batched_targets
+        batched_img_pos = np.vstack(img_pos) if img_pos[0] is not None else None
+        batched_rgb_img = np.stack(rgb_img, axis=0)
+        # print max and min of label ignoring 255
+        # print(f"Max label: {torch.max(batched_targets[batched_targets != 255])}, Min label: {torch.min(batched_targets[batched_targets != 255])}")
+        return batched_imgs, batched_targets, batched_img_pos, batched_rgb_img, label_name
+    
+
 def stratified_split(dataset, train_ratio=0.8):
     # split the dataset into train and validation set, the dataset is for pixel-wise classification
     # the label of each img is in shape (H*W, 1), as a tensor, so we need to split the dataset based on the label

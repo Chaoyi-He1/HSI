@@ -13,6 +13,7 @@ import scipy.io as sio
 import torch.utils.data as data
 from PIL import Image
 import matplotlib.pyplot as plt
+from my_dataset import *
 
 
 def create_model(model_name="transformer", num_classes=2, in_chans=10):
@@ -20,182 +21,109 @@ def create_model(model_name="transformer", num_classes=2, in_chans=10):
     return model
 
 
-def creat_endmember_label(img, endmember_label_dict, endmember_files, original_label_file, original_label_dict):
-    img_h, img_w = img.shape[:2]
-    endmember_label = np.zeros((img_h, img_w), dtype=np.uint8) + len(endmember_label_dict) - 1
-    # skip background
-    for i, label in enumerate(k for k in endmember_label_dict.keys() if k != 6):
-        if os.path.exists(endmember_files[i]):
-            endmember_label[sio.loadmat(endmember_files[i])["overlay"].astype(bool)] = label
-    
-    img_original_label = np.array(Image.open(original_label_file))
-    pixel_index = np.zeros((img_h, img_w), dtype=bool)
-    # skip background
-    for label, name in ((k, v) for k, v in original_label_dict.items() if v != "background"):
-        if any(name.lower() in value.lower() for value in endmember_label_dict.values()):
-            pixel_index = np.logical_or(pixel_index, img_original_label == label)
-    
-    return endmember_label, pixel_index
-        
+def overlay_labels(img, labels, endmember_label_color, hsi_drive_label, transparency):
+    mask = labels != 255
+    unique_labels = np.unique(labels[mask])
+    for label in unique_labels:
+        label_mask = labels == label
+        img[label_mask] = endmember_label_color[hsi_drive_label[label]] * (1 - transparency) + img[label_mask] * transparency
+    return img
 
+        
 def main(args):
     device = torch.device(args.device)
     
-    rgb = "rgb" if args.img_type == 'rgb' else ''
-    channel = "_ALL71channel" if args.img_type == 'ALL' else "_OSP10channel"
+    whole_img_dataset = HSI_Drive_V1(data_path=args.data_path,
+                                     use_MF=args.use_MF,
+                                     use_dual=args.use_dual,
+                                     use_OSP=args.use_OSP,
+                                     use_raw=args.use_raw,
+                                     use_cache=False,
+                                     use_rgb=args.use_rgb,
+                                     use_attention=args.use_attention,
+                                     use_large_mlp=args.use_large_mlp,
+                                     num_attention=args.num_attention,)
     
-    num_classes = args.num_classes
-    model = create_model(num_classes=num_classes, in_chans=3 if args.img_type == "rgb" else 12)
-    model.to(device)
+    test_sampler = torch.utils.data.SequentialSampler(whole_img_dataset)
     
-    if args.resume.endswith(".pth"):
-        checkpoint = torch.load(args.resume, map_location='cpu')  
-        model.load_state_dict(checkpoint['model'])
+    val_data_loader = torch.utils.data.DataLoader(
+        whole_img_dataset, batch_size=1,
+        sampler=test_sampler, num_workers=args.workers,
+        collate_fn=whole_img_dataset.collate_fn, drop_last=False)
     
-    data_path = '/data2/chaoyi/HSI_Dataset/V2/test'
-    test_pics_folders = [
-        '20210410_114953_02', '20210409_142547_01', '20210409_152426_305174',
-        '20210410_105622_01', '20210409_155305_02', '20210409_144751_58',
-        '20210409_170413_00' 
-    ]
-    origin_label = {
-        0: "road",
-        1: "sidewalk",
-        2: "building",
-        3: "wall",
-        4: "fence",
-        5: "pole",
-        6: "traffic light",
-        7: "traffic sign",
-        8: "tree",
-        9: "terrain",
-        10: "sky",
-        11: "person",
-        12: "rider",
-        13: "car",
-        14: "truck",
-        15: "bus",
-        16: "train",
-        17: "motorcycle",
-        18: "bicycle",
-        19: "background",
-    }
-    endmember_label = {
-        0: "Roadlabel",
-        1: "Building_Concrete_label",
-        2: "Building_Glass_label",
-        3: "Car_white_label",
-        4: "Treelabel",
-        5: "Skylabel",
-        6: "background",
+    
+    hsi_drive_label = {
+        "Road": 0,  # gray
+        "Road marks": 1,    # yellow
+        "Vegatation": 2,    # green
+        "Painted metal": 3, # red
+        "Sky": 4,        # blue
+        "Concrete/Stone/Brick": 5,  # brown
+        "Pedestrian/Cyclist": 6,    # pink
+        "Unpainted metal": 7,   # purple
+        "Glass/Transparent Plastic": 8, # light blue
+        "Unknown": 255  
     }
     endmember_label_color = {
-        "Roadlabel": np.array([255, 0, 0]), # red
-        "Building_Concrete_label": np.array([0, 255, 0]), # green
-        "Building_Glass_label": np.array([0, 0, 255]), # blue
-        "Car_white_label": np.array([255, 255, 0]), # yellow
-        "Treelabel": np.array([255, 0, 255]), # magenta
-        "Skylabel": np.array([0, 255, 255]), # cyan
-        "background": np.array([0, 0, 0]), # black
+        "Road": np.array([128, 128, 128]),  # gray
+        "Road marks": np.array([255, 255, 0]),    # yellow
+        "Vegatation": np.array([0, 255, 0]),    # green
+        "Painted metal": np.array([255, 0, 0]), # red
+        "Sky": np.array([0, 0, 255]),        # blue
+        "Concrete/Stone/Brick": np.array([165, 42, 42]),  # brown
+        "Pedestrian/Cyclist": np.array([255, 192, 203]),    # pink
+        "Unpainted metal": np.array([128, 0, 128]),   # purple
+        "Glass/Transparent Plastic": np.array([173, 216, 230]), # light blue
     }
     
-    for pic_folder in test_pics_folders:
-        
-        if args.img_type != "rgb":
-            for file in os.listdir(os.path.join(data_path, pic_folder)):
-                if os.path.splitext(file)[-1].lower() == ".mat" and args.img_type in file and args.img_type != "rgb":
-                    pic_path = os.path.join(data_path, pic_folder, file)
-                    break
-        else:
-            for file in os.listdir(os.path.join(data_path, pic_folder)):
-                if os.path.splitext(file)[-1].lower() == ".jpg" and args.img_type in file and args.img_type == "rgb":
-                    pic_path = os.path.join(data_path, pic_folder, file)
-                    break
-        
-        endmember_groundtruth_files = [
-            pic_path.replace(pic_path.split(os.sep)[-1], 
-                             os.path.splitext(
-                                 os.path.basename(pic_path))[0].replace(channel, "").replace(rgb, "") 
-                             + "_" + "Roadlabel" + '.mat'),
-            pic_path.replace(pic_path.split(os.sep)[-1], 
-                             os.path.splitext(
-                                 os.path.basename(pic_path))[0].replace(channel, "").replace(rgb, "") 
-                             + "_" + "Building_Concrete_label" + '.mat'),
-            pic_path.replace(pic_path.split(os.sep)[-1],
-                                os.path.splitext(
-                                    os.path.basename(pic_path))[0].replace(channel, "").replace(rgb, "") 
-                                + "_" + "Building_Glass_label" + '.mat'),
-            pic_path.replace(pic_path.split(os.sep)[-1],
-                                os.path.splitext(
-                                    os.path.basename(pic_path))[0].replace(channel, "").replace(rgb, "") 
-                                + "_" + "Car_white_label" + '.mat'),
-            pic_path.replace(pic_path.split(os.sep)[-1],
-                                os.path.splitext(
-                                    os.path.basename(pic_path))[0].replace(channel, "").replace(rgb, "") 
-                                + "_" + "Treelabel" + '.mat'),
-            pic_path.replace(pic_path.split(os.sep)[-1],
-                                os.path.splitext(
-                                    os.path.basename(pic_path))[0].replace(channel, "").replace(rgb, "") 
-                                + "_" + "Skylabel" + '.mat'),
-        ]
-        rgb = "rgb" if args.img_type != 'rgb' else ''
-        original_label_file = pic_path.replace(pic_path.split(os.sep)[-1], rgb
-                                       + os.path.splitext(os.path.basename(pic_path))[0].replace(channel, "")
-                                       + "_gray.png")
-        
-        img = sio.loadmat(pic_path)["filtered_img"].astype(np.float16) \
-            if args.img_type != "rgb" else np.array(Image.open(pic_path)).astype(np.float16)
-        rgb_img = np.array(Image.open(os.path.join(data_path, pic_folder, "rgb" + pic_folder + ".jpg")))
-        img_pos = np.indices(img.shape[:2]).transpose(1, 2, 0)
-        img_original_label = np.array(Image.open(original_label_file))
-        endmember_label_img, pixel_index = creat_endmember_label(img, endmember_label, endmember_groundtruth_files, original_label_file, origin_label)
-        
-        # take out the pixel according to the pixel_index
-        img = img[pixel_index, :]
-        img_pos = img_pos[pixel_index, :]
-        img_original_label = img_original_label[pixel_index]
-        endmember_label_img = endmember_label_img[pixel_index]
-        
-        img = img[:img.shape[0] // 10 * 10, :]
-        img = img[:, [6, 44, 11, 70, 3, 56, 35, 50, 49, 67, 47, 22]]
-        img_pos = img_pos[:img_pos.shape[0] // 10 * 10, :]
-        img_original_label = img_original_label[:img_original_label.shape[0] // 10 * 10]
-        endmember_label_img = endmember_label_img[:endmember_label_img.shape[0] // 10 * 10]
-        
+    print("Creating model")
+    if args.use_rgb:
+        in_chans = 3
+    elif args.use_OSP:
+        in_chans = args.num_attention
+    elif args.use_attention:
+        in_chans = args.num_attention
+    elif not args.use_OSP and args.use_dual and not args.use_raw:
+        in_chans = 252
+    elif not args.use_OSP and not args.use_dual and not args.use_raw:
+        in_chans = 71
+    elif args.use_raw:
+        in_chans = 25
+    model = create_model(num_classes=9, in_chans=in_chans, large=args.use_large_mlp)
+    model.to(device)
+    
+    for image, target, img_pos, rgb_img, name in val_data_loader:
         # transform img to tensor, use model to predict in gpu
-        img = torch.from_numpy(img).to(device).view(-1, 10, img.shape[1]) # img: (-1, 10, dim)
-        img_pos = np.reshape(img_pos, (-1, 10, 2))
-        img_original_label = torch.from_numpy(img_original_label).to(device).view(-1, 10)
-        endmember_label_img = torch.from_numpy(endmember_label_img).to(device).view(-1, 10)
+        image, target = image.to(device), target.to(device)
         
         with torch.no_grad(), torch.cuda.amp.autocast(enabled=True):
-            pred = model(img) # pred: (-1, 10, dim)
-            del img
+            pred = model(image) # pred: (-1, 10, dim)
+            
         pred = torch.argmax(pred, dim=-1).view(-1,).cpu().numpy()
-        img_pos = np.reshape(img_pos, (-1, 2))
-        img_original_label = img_original_label.view(-1,).cpu().numpy()
-        endmember_label_img = endmember_label_img.view(-1,).cpu().numpy()
+        
+        img_pos = np.reshape(img_pos, (219, 406, 2))
+        img_original_label = target.view(219, 406).cpu().numpy()
+        pred = pred.view(219, 406).cpu().numpy()
+        rgb_img = rgb_img.reshape(219, 406, 3)  # np.array, shape (H, W, C)
         
         # visualize the prediction, use the rgb image as background, with transparency factor adjustable
-        # plot 2 results in one figure, subplot one is the "endmember_label_img" (ground truth), the other subplot is the "pred" (prediction)
+        # plot 2 results in one figure, subplot one is the "img_original_label" (ground truth), the other subplot is the "pred" (prediction)
         # the color of the prediction is the same as the ground truth according to the "endmember_label_color"
         # the position of the prediction is the same as the ground truth according to the "img_pos"
         transparency = 0.3
         fig, ax = plt.subplots(1, 2, figsize=(20, 10))
-        # subplot 1, use rgb image as background and plot the ground truth on it, label is in shape (-1,) woth position in shape (-1, 2)
-        # add the color according to the "endmember_label_color" to the rgb image at the position of the label
+        
+        # subplot 1, use rgb image as background and plot the ground truth on it, label is in shape (219, 406) with position in shape (219, 406, 2)
+        # add the color according to the "endmember_label_color" to the rgb image at the position of the label, ignore the "Unknown" (255) ground truth label
         # make the rgb image transparent by the "transparency"
-        img_to_plot = rgb_img.copy() 
-        for i, label in enumerate(endmember_label_img):
-            # this pixel's origin rgb value will be set as background color with transparency, the color of the label will be added to the background color
-            img_to_plot[img_pos[i, 0], img_pos[i, 1]] = endmember_label_color[endmember_label[label]] * (1 - transparency) + img_to_plot[img_pos[i, 0], img_pos[i, 1]] * transparency
+        img_to_plot = overlay_labels(rgb_img.copy(), img_original_label, endmember_label_color, hsi_drive_label, transparency)
         ax[0].imshow(img_to_plot)
         ax[0].set_title("Ground Truth")
+        
         # subplot 2, use rgb image as background and plot the prediction on it, label is in shape (-1,) woth position in shape (-1, 2)
         # add the color according to the "endmember_label_color" to the rgb image at the position of the label
-        img_to_plot = rgb_img.copy()
-        for i, label in enumerate(pred):
-            img_to_plot[img_pos[i, 0], img_pos[i, 1]] = endmember_label_color[endmember_label[label]] * (1 - transparency) + img_to_plot[img_pos[i, 0], img_pos[i, 1]] * transparency
+        # make the rgb image transparent by the "transparency"
+        img_to_plot = overlay_labels(rgb_img.copy(), pred, endmember_label_color, hsi_drive_label, transparency)
         ax[1].imshow(img_to_plot)
         ax[1].set_title("Prediction")
         
@@ -204,10 +132,9 @@ def main(args):
             ax[0].text(10, 60 + 50 * i, label, color=color / 255, fontsize=15)
             ax[1].text(10, 60 + 50 * i, label, color=color / 255, fontsize=15)
         # save the figure
-        plt.savefig(os.path.join(args.output_dir, pic_folder + ".png"))
+        plt.savefig(os.path.join(args.output_dir, name + ".png"))
+        plt.close(fig)
         
-        
-    
     
 if __name__ == "__main__":
     import argparse

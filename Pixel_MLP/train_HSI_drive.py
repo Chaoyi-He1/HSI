@@ -12,8 +12,8 @@ from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import DataLoader, random_split
 
 
-def create_model(model_name="mlp_pixel", num_classes=2, in_chans=10):
-    model = get_model(model_name, num_classes=num_classes, in_channels=in_chans)
+def create_model(model_name="mlp_pixel", num_classes=2, in_chans=10, large=True):
+    model = get_model(model_name, num_classes=num_classes, in_channels=in_chans, large=large)
     return model
 
 def main(args):
@@ -22,7 +22,7 @@ def main(args):
     # if args.rank in [-1, 0]:
     print('Start Tensorboard with "tensorboard --logdir=runs", view at http://localhost:6006/')
     # Save tb_writer to runs/HSI_drive/times
-    tb_writer = SummaryWriter(log_dir="runs/HSI_drive/9 cls/Dual_OSP/{}".format(datetime.datetime.now().strftime('%Y%m%d-%H%M%S')))
+    tb_writer = SummaryWriter(log_dir="runs/HSI_drive/9 cls/Dual_HVI/{}".format(datetime.datetime.now().strftime('%Y%m%d-%H%M%S')))
 
     device = torch.device(args.device)
     
@@ -38,17 +38,17 @@ def main(args):
 
     print("Creating data loaders")
     # load train data set
-    whole_dataset = HSI_Drive_V1(data_path=args.data_path,
-                                 use_MF=args.use_MF,
-                                 use_dual=args.use_dual,
-                                 use_OSP=args.use_OSP,
-                                 use_raw=args.use_raw,
-                                 use_cache=args.use_cache,
-                                 use_rgb=args.use_rgb,
-                                 use_attention=args.use_attention,
-                                 use_large_mlp=args.use_large_mlp,
-                                 num_attention=args.num_attention,)
-    
+    whole_dataset = HSI_Drive_V1_(data_path=args.data_path,
+                                  use_MF=args.use_MF,
+                                  use_dual=args.use_dual,
+                                  use_OSP=args.use_OSP,
+                                  use_raw=args.use_raw,
+                                  use_cache=args.use_cache,
+                                  use_rgb=args.use_rgb,
+                                  use_attention=args.use_attention,
+                                  use_large_mlp=args.use_large_mlp,
+                                  num_attention=args.num_attention,)
+     
     if not args.use_cache:
         train_dataset, val_dataset = stratified_split(whole_dataset, train_ratio=0.8)
     else:
@@ -98,7 +98,7 @@ def main(args):
         in_chans = 71
     elif args.use_raw:
         in_chans = 25
-    model = create_model(num_classes=num_classes, in_chans=in_chans)
+    model = create_model(num_classes=num_classes, in_chans=in_chans, large=args.use_large_mlp)
     model.to(device)
     
     num_parameters, num_layers = sum(p.numel() for p in model.parameters() if p.requires_grad), len(list(model.parameters()))
@@ -205,8 +205,8 @@ def main(args):
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print('Training time {}'.format(total_time_str))
     
-    # atten_weights = model_without_ddp.atten.detach().cpu().numpy()
-    # np.savetxt('atten_weights_large_mlp.csv', atten_weights, delimiter=',')
+    atten_weights = model_without_ddp.atten.detach().cpu().numpy()
+    np.savetxt('atten_weights_lite_mlp.csv', atten_weights, delimiter=',')
     
 
 if __name__ == "__main__":
@@ -228,7 +228,7 @@ if __name__ == "__main__":
     
     parser.add_argument('--use_attention', default=False, type=bool, help='use attention')
     parser.add_argument('--use_large_mlp', default=False, type=bool, help='use large mlp')
-    parser.add_argument('--num_attention', default=3, type=int, help='num_attention')
+    parser.add_argument('--num_attention', default=10, type=int, help='num_attention')
     
     parser.add_argument('--use_sr', default=False, type=bool, help='use sr')
     parser.add_argument('--cal_IoU', default=True, type=bool, help='calculate IoU')
@@ -242,7 +242,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--start_epoch', default=0, type=int, help='start epoch')
 
-    parser.add_argument('--epochs', default=300, type=int, metavar='N',
+    parser.add_argument('--epochs', default=500, type=int, metavar='N',
                         help='number of total epochs to run')
 
     parser.add_argument('--sync_bn', type=bool, default=False, help='whether using SyncBatchNorm')

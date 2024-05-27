@@ -12,7 +12,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 
 def create_model(model_name="mlp_pixel", num_classes=2, in_chans=10):
-    model = get_model(model_name, num_classes=num_classes, in_channels=in_chans)
+    model = get_model(model_name, num_classes=num_classes, in_channels=in_chans, large=True)
     return model
 
 
@@ -50,7 +50,7 @@ if __name__ == "__main__":
     parser.add_argument('--num-classes', default=9, type=int, help='num_classes')
     parser.add_argument('--img_type', default='OSP', help='image type: OSP or PCA or rgb')
     parser.add_argument('--output-dir', default='./Pixel_MLP/multi_train/OSP/', help='path where to save')
-    parser.add_argument('--resume', default='/data/chaoyi_he/HSI/EC_dataset/Pixel_MLP/multi_train/HSI_drive/OSP/model_299.pth', help='resume from checkpoint')
+    parser.add_argument('--resume', default='/data/chaoyi_he/HSI/EC_dataset/Pixel_MLP/multi_train/HSI_drive/OSP/model_499.pth', help='resume from checkpoint')
     
     parser.add_argument('--use_MF', default=True, type=bool, help='use MF')
     parser.add_argument('--use_dual', default=True, type=bool, help='use dual')

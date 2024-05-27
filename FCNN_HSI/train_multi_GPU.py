@@ -20,7 +20,7 @@ def create_model(in_chans, num_classes, model="Unet"):
     elif model == 'FCNN_4':
         model = FCNN_4(in_ch=in_chans, num_classes=num_classes)
     elif model == 'Unet':
-        model = UNet(in_channels=in_chans, num_classes=num_classes, base_c=32)
+        model = UNet(in_channels=in_chans, num_classes=num_classes, base_c=8)
     return model
 
 
@@ -66,19 +66,19 @@ class SegmentationCrop:
 
 
 def main(args):
-    init_distributed_mode(args)
+    # init_distributed_mode(args)
     print(args)
-    if args.rank in [-1, 0]:
-        print('Start Tensorboard with "tensorboard --logdir=runs", view at http://localhost:6006/')
-        tb_writer = SummaryWriter(log_dir="runs/HSI_drive/9 cls/Dual_HVI/{}".format(datetime.datetime.now().strftime('%Y%m%d-%H%M%S')))
+    # if args.rank in [-1, 0]:
+    print('Start Tensorboard with "tensorboard --logdir=runs", view at http://localhost:6006/')
+    tb_writer = SummaryWriter(log_dir="runs/HSI_drive/9 cls/RGB/{}".format(datetime.datetime.now().strftime('%Y%m%d-%H%M%S')))
 
     device = torch.device(args.device)
 
     # fix the seed for reproducibility
-    seed = 42
-    torch.manual_seed(seed)
-    np.random.seed(seed)
-    random.seed(seed)
+    # seed = 42
+    # torch.manual_seed(seed)
+    # np.random.seed(seed)
+    # random.seed(seed)
     
     num_classes = args.num_classes
 
@@ -94,12 +94,12 @@ def main(args):
                                  use_rgb=args.use_rgb,)
     train_dataset, val_dataset = stratified_split(whole_dataset, train_ratio=0.8)
     
-    if args.distributed:
-        train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
-        test_sampler = torch.utils.data.distributed.DistributedSampler(val_dataset)
-    else:
-        train_sampler = torch.utils.data.RandomSampler(train_dataset)
-        test_sampler = torch.utils.data.SequentialSampler(val_dataset)
+    # if args.distributed:
+    #     train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
+    #     test_sampler = torch.utils.data.distributed.DistributedSampler(val_dataset)
+    # else:
+    train_sampler = torch.utils.data.RandomSampler(train_dataset)
+    test_sampler = torch.utils.data.SequentialSampler(val_dataset)
 
     train_data_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=args.batch_size,
@@ -132,13 +132,13 @@ def main(args):
     print(f"Number of parameters: {num_parameters}, number of layers: {num_layers}")
     # load_conv_weights(model, os.path.join(args.output_dir, 'conv_weights'))
 
-    if args.sync_bn:
-        model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
+    # if args.sync_bn:
+    #     model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
 
     model_without_ddp = model
-    if args.distributed:
-        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
-        model_without_ddp = model.module
+    # if args.distributed:
+    #     model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
+    #     model_without_ddp = model.module
 
     params_to_optimize = [p for p in model.parameters() if p.requires_grad]
 
@@ -169,8 +169,8 @@ def main(args):
     print("Start training")
     start_time = time.time()
     for epoch in range(args.start_epoch, args.epochs + args.start_epoch):
-        if args.distributed:
-            train_sampler.set_epoch(epoch)
+        # if args.distributed:
+        #     train_sampler.set_epoch(epoch)
         mean_loss, mean_acc, lr, confusion_mtx = train_one_epoch(model, optimizer, train_data_loader, device, epoch,
                                                                  lr_scheduler=lr_scheduler, print_freq=args.print_freq, scaler=scaler,
                                                                  lambda1=args.lambda1, lambda2=args.lambda2, num_classes=num_classes)
@@ -183,29 +183,29 @@ def main(args):
         print(val_info)
 
         # 只在主进程上进行写操作
-        if args.rank in [-1, 0]:
-            if tb_writer:
-                tags = ['train_loss', 'train_acc', 'val_loss', 'val_acc', 
-                        'IoU/Road', 'IoU/Road marks', 'IoU/Vegetation', 'IoU/Painted Metal',
-                        'IoU/Sky', 'IoU/Concrete or Stone or Brick', 'IoU/Pedestrian or Cyclist',
-                        'IoU/Unpainted Metal', 'IoU/Glass or Transparent Plastic',
-                        'mean_IoU']
-                values = [mean_loss, mean_acc, loss_val, acc_val] + [i for i in (iu * 100).tolist()] + [iu.mean().item() * 100]
-                for x, tag in zip(values, tags):
-                    tb_writer.add_scalar(tag, x, epoch)
-                # add confusion matrix to tensorboard
-                tb_writer.add_figure('confusion_matrix', confusion_mtx, epoch)
-                tb_writer.add_figure('confusion_matrix_val', confusion_mtx_val, epoch)
-                plt.close(confusion_mtx)
-                plt.close(confusion_mtx_val)
-                    
-            # write into txt
-            with open(results_file, "a") as f:
-                # 记录每个epoch对应的train_loss、lr以及验证集各指标
-                train_info = f"[epoch: {epoch}]\n" \
-                             f"train_loss: {mean_loss:.4f}\n" \
-                             f"lr: {lr:.6f}\n"
-                f.write(train_info + "\n\n")
+        # if args.rank in [-1, 0]:
+        if tb_writer:
+            tags = ['train_loss', 'train_acc', 'val_loss', 'val_acc', 
+                    'IoU/Road', 'IoU/Road marks', 'IoU/Vegetation', 'IoU/Painted Metal',
+                    'IoU/Sky', 'IoU/Concrete or Stone or Brick', 'IoU/Pedestrian or Cyclist',
+                    'IoU/Unpainted Metal', 'IoU/Glass or Transparent Plastic',
+                    'mean_IoU']
+            values = [mean_loss, mean_acc, loss_val, acc_val] + [i for i in (iu * 100).tolist()] + [iu.mean().item() * 100]
+            for x, tag in zip(values, tags):
+                tb_writer.add_scalar(tag, x, epoch)
+            # add confusion matrix to tensorboard
+            tb_writer.add_figure('confusion_matrix', confusion_mtx, epoch)
+            tb_writer.add_figure('confusion_matrix_val', confusion_mtx_val, epoch)
+            plt.close(confusion_mtx)
+            plt.close(confusion_mtx_val)
+                
+        # write into txt
+        with open(results_file, "a") as f:
+            # 记录每个epoch对应的train_loss、lr以及验证集各指标
+            train_info = f"[epoch: {epoch}]\n" \
+                            f"train_loss: {mean_loss:.4f}\n" \
+                            f"lr: {lr:.6f}\n"
+            f.write(train_info + "\n\n")
 
         if args.output_dir:
             # 只在主节点上执行保存权重操作
@@ -217,9 +217,8 @@ def main(args):
             if args.amp:
                 save_file["scaler"] = scaler.state_dict()
             digits = len(str(args.epochs))
-            save_on_master(save_file,
-                           os.path.join(args.output_dir, 'model_{}.pth'.format(
-                            str(epoch).zfill(digits))))
+            torch.save(save_file,
+                       os.path.join(args.output_dir, 'model_{}.pth'.format(str(epoch).zfill(digits))))
 
     total_time = time.time() - start_time
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
@@ -239,7 +238,7 @@ if __name__ == "__main__":
     
     parser.add_argument('--use_MF', default=False, type=bool, help='use MF')
     parser.add_argument('--use_dual', default=True, type=bool, help='use dual')
-    parser.add_argument('--use_OSP', default=True, type=bool, help='use OSP')
+    parser.add_argument('--use_OSP', default=False, type=bool, help='use OSP')
     parser.add_argument('--use_raw', default=False, type=bool, help='use raw')
     parser.add_argument('--use_rgb', default=False, type=bool, help='use rgb')
 
