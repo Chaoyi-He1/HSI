@@ -454,7 +454,8 @@ class HSI_Drive(data.Dataset):
 
 class HSI_Drive_V1(data.Dataset):
     def __init__(self, data_path: str = "", use_MF: bool = True, use_dual: bool = True,
-                 use_OSP: bool = True, use_raw: bool = False, use_rgb: bool = False, transforms=None):
+                 use_OSP: bool = True, use_raw: bool = False, use_rgb: bool = False, transforms=None,
+                 use_attention: bool = False, use_large_mlp: bool = False, num_attention: int = 10):
         self.use_MF = use_MF
         self.use_dual = use_dual
         self.use_OSP = use_OSP
@@ -462,6 +463,10 @@ class HSI_Drive_V1(data.Dataset):
         self.use_rgb = use_rgb
         
         self.transforms = transforms
+        
+        self.use_attention = use_attention
+        self.use_large_mlp = use_large_mlp
+        self.num_attention = num_attention
         
         self.data_folder_path = os.path.join(data_path, "cubes_float32")
         if not use_raw:
@@ -526,9 +531,15 @@ class HSI_Drive_V1(data.Dataset):
         img_pos = np.indices(img.shape[:2]).transpose(1, 2, 0)
         
         if self.use_OSP and not self.use_dual and not self.use_raw and not self.use_rgb:
-            img = img[:, :, [60, 44, 17, 27, 53, 4, 1, 20, 71, 13]]
+            OSP_index = [60, 44, 17, 27, 53, 4, 1, 20, 71, 13]
+            img = img[:, OSP_index[:self.num_attention]]
         elif self.use_OSP and self.use_dual and not self.use_raw and not self.use_rgb:
-            img = img[:, :, [42, 34, 16, 230, 95, 243, 218, 181, 11, 193]]
+            OSP_index = [42, 34, 16, 230, 95, 243, 218, 181, 11, 193]
+            img = img[:, OSP_index[:self.num_attention]]
+        elif self.use_attention and self.use_dual and not self.use_raw and not self.use_rgb:
+            attention_index = [193, 181, 169, 163, 175, 187, 58, 223, 184, 40] if self.use_large_mlp \
+                else [202, 250, 140, 212, 4, 169, 76, 58, 205, 14]
+            img = img[:, attention_index[:self.num_attention]]
         
         img = torch.from_numpy(img).to(dtype=torch.float32).permute(2, 0, 1)
         label = torch.from_numpy(label).to(dtype=torch.int64)

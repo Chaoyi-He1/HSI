@@ -14,7 +14,20 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 
-def create_model(in_chans, num_classes, model="Unet"):
+def save_conv_weights(model, save_path):
+    conv_layer = model.pre_process_conv.weight.data
+    if not os.path.exists(save_path):
+            os.makedirs(save_path)
+    for out_ch in range(conv_layer.shape[0]):
+        save_mtx = conv_layer[out_ch, :, :, :].cpu().numpy()
+        save_mtx = np.reshape(save_mtx, (save_mtx.shape[0] * save_mtx.shape[1], save_mtx.shape[2]))
+        file_name = os.path.join(save_path, 'conv_{}.csv'.format(out_ch))
+        if os.path.exists(file_name):
+            os.remove(file_name)
+        pd.DataFrame(save_mtx).to_csv(file_name, index=False, header=False)
+        
+
+def create_model(in_chans, num_classes, model="FCNN_lite"):
     if model == 'FCNN_lite':
         model = FCNN_lite(in_ch=in_chans, num_classes=num_classes)
     elif model == 'FCNN_4':
@@ -22,6 +35,23 @@ def create_model(in_chans, num_classes, model="Unet"):
     elif model == 'Unet':
         model = UNet(in_channels=in_chans, num_classes=num_classes, base_c=8)
     return model
+
+
+def load_conv_weights(model: torch.nn.Module, load_path):
+    # load all 'conv_index_i.csv' files in load_path
+    file_list = os.listdir(load_path)
+    file_list = [file for file in file_list if file.endswith('.csv') and file.startswith('conv_index_')]
+    
+    # Manually set the weights, each file is a 3x3 index for the channel of each 3x3 elements to be set to 1, others are 0
+    with torch.no_grad():
+        model.pre_process_conv.weight.fill_(0)
+        for i, file in enumerate(file_list):
+            file_path = os.path.join(load_path, file)
+            conv_index = pd.read_csv(file_path, header=None).values
+            conv_index = np.reshape(conv_index, (3, 3))
+            for idx, val in np.ndenumerate(conv_index):
+                model.pre_process_conv.weight[i, val, idx[0], idx[1]] = 1
+    model.pre_process_conv.weight.requires_grad = False
 
 
 def save_conv_weights(model, save_path):
@@ -70,7 +100,7 @@ def main(args):
     print(args)
     # if args.rank in [-1, 0]:
     print('Start Tensorboard with "tensorboard --logdir=runs", view at http://localhost:6006/')
-    tb_writer = SummaryWriter(log_dir="runs/HSI_drive/9 cls/RGB/{}".format(datetime.datetime.now().strftime('%Y%m%d-%H%M%S')))
+    tb_writer = SummaryWriter(log_dir="runs/HSI_drive/9 cls/in_sensor/{}".format(datetime.datetime.now().strftime('%Y%m%d-%H%M%S')))
 
     device = torch.device(args.device)
 
@@ -91,7 +121,10 @@ def main(args):
                                  use_dual=args.use_dual,
                                  use_OSP=args.use_OSP,
                                  use_raw=args.use_raw,
-                                 use_rgb=args.use_rgb,)
+                                 use_rgb=args.use_rgb,
+                                 use_attention=args.use_attention,
+                                 use_large_mlp=args.use_large_mlp,
+                                 num_attention=args.num_attention,)
     train_dataset, val_dataset = stratified_split(whole_dataset, train_ratio=0.8)
     
     # if args.distributed:
@@ -223,6 +256,7 @@ def main(args):
     total_time = time.time() - start_time
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print('Training time {}'.format(total_time_str))
+    save_conv_weights(model_without_ddp, os.path.join(args.output_dir, 'conv_weights'))
     # save_conv_weights(model_without_ddp, os.path.join(args.output_dir, 'conv_weights'))
 
 
@@ -241,8 +275,12 @@ if __name__ == "__main__":
     parser.add_argument('--use_OSP', default=False, type=bool, help='use OSP')
     parser.add_argument('--use_raw', default=False, type=bool, help='use raw')
     parser.add_argument('--use_rgb', default=False, type=bool, help='use rgb')
+    
+    parser.add_argument('--use_attention', default=False, type=bool, help='use attention')
+    parser.add_argument('--use_large_mlp', default=False, type=bool, help='use large mlp')
+    parser.add_argument('--num_attention', default=10, type=int, help='num_attention')
 
-    parser.add_argument('--device', default='cuda', help='device')
+    parser.add_argument('--device', default='cuda:1', help='device')
 
     parser.add_argument('--num-classes', default=9, type=int, help='num_classes')
     parser.add_argument('--lambda1', default=0.4, type=float, help='lambda1')

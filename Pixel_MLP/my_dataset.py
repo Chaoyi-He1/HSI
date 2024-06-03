@@ -942,21 +942,13 @@ class HSI_Drive_V1_visual(data.Dataset):
         if use_cache:
             self.cache_data()
         
-    def relabeling(self, label, end_label):
+    def relabeling(self, label):
         for k, v in self.hsi_drive_original_label.items():
             if k not in self.selected_labels:
                 label[label == k] = 255
         # relabel the label from 0 to end, with 255 as the background
         for i, k in enumerate(self.selected_labels):
-            # relabel the label matrix from 0 to end where in end_label has the same label, otherwise, label it as 255
-            # if end_label and label have no common label, then dont consider end_label
-            if k not in end_label:
-                label[label == k] = i
-            else:
-                relabel_index = (end_label == k) & (label == k)
-                label[relabel_index] = i
-                ignore_index = (end_label != k) & (label == k)
-                label[ignore_index] = 255
+            label[label == k] = i
         return label
     
     def cache_data(self):
@@ -1019,8 +1011,8 @@ class HSI_Drive_V1_visual(data.Dataset):
             rgb_img = np.array(Image.open(self.rgb_paths[index]))
             
             label = np.array(Image.open(self.label_paths[index]))
-            end_label = np.array(Image.open(self.end_label_paths[index]))
-            label = self.relabeling(label, end_label)
+            # end_label = np.array(Image.open(self.end_label_paths[index]))
+            label = self.relabeling(label)
             img_pos = np.indices(img.shape[:2]).transpose(1, 2, 0)
             
             img = img.reshape(-1, img.shape[-1])

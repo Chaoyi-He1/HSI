@@ -24,15 +24,26 @@ class FCNN(nn.Module):
         self.in_ch = in_ch
         self.num_classes = num_classes
         
-        self.model = nn.Sequential(
-            ConvBNReLU(in_ch, 25, kernel_size=3),
-            ConvBNReLU(25, 300, kernel_size=3),
-            # ConvBNReLU(128, 512, kernel_size=3),
-            nn.Conv2d(300, num_classes, kernel_size=3, padding=1),
+        self.pre_process_conv = nn.Conv2d(in_ch, 10, kernel_size=3, padding=1)
+        self.bn = nn.BatchNorm2d(10)
+        
+        
+        self.layers = nn.Sequential(
+            nn.Linear(10, 512),
+            nn.ReLU(inplace=True),
+            nn.Linear(512, 1024),
+            nn.ReLU(inplace=True),
+            nn.Linear(1024, 512),
+            nn.ReLU(inplace=True),
+            nn.Linear(512, num_classes)
         )
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.model(x)
+        x = self.pre_process_conv(x)
+        x = self.bn(x)
+        x = x.permute(0, 2, 3, 1)
+        x = self.layers(x)
+        return x.permute(0, 3, 1, 2)
 
 class FCNN_4lv(nn.Module):
     def __init__(self, in_ch: int, num_classes: int):

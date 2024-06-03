@@ -13,19 +13,23 @@ class MLP_Pixel(nn.Module):
         super(MLP_Pixel, self).__init__()
         if large:
             self.layers = nn.Sequential(
-                nn.Linear(in_nodes, 1024),
+                nn.Linear(in_nodes, 512),
+                nn.ReLU(inplace=True),
+                nn.Linear(512, 1024),
                 nn.ReLU(inplace=True),
                 nn.Linear(1024, 1024),
                 nn.ReLU(inplace=True),
-                nn.Linear(1024, num_class)
+                nn.Linear(1024, 512),
+                nn.ReLU(inplace=True),
+                nn.Linear(512, num_class)
             )
         else:
             self.layers = nn.Sequential(
-                nn.Linear(in_nodes, 25),
+                nn.Linear(in_nodes, 32),
                 nn.ReLU(inplace=True),
-                nn.Linear(25, 300),
+                nn.Linear(32, 256),
                 nn.ReLU(inplace=True),
-                nn.Linear(300, num_class)
+                nn.Linear(256, num_class)
             )
         
         # self.atten = nn.Parameter(torch.ones(1, in_nodes))
