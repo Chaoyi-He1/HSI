@@ -80,14 +80,63 @@ def main(args):
     # Define a prediction function
     def model_predict(x):
         model.eval()
+        # separately send the input to device for prediction
         with torch.no_grad(), torch.cuda.amp.autocast():
-            tensor = torch.tensor(x).to(device)
-            return model(tensor).detach().cpu().numpy()
+            # num_batches = x.shape[0] // 100
+            # y = []
+            # for i in range(num_batches):
+            #     input_x = torch.tensor(x[i*100:(i+1)*100]).to(device)
+            #     output = model(input_x)
+            #     y.append(output.cpu().numpy())
+            # if num_batches * 100 < x.shape[0]:
+            #     input_x = torch.tensor(x[num_batches*100:]).to(device)
+            #     output = model(input_x)
+            #     y.append(output.cpu().numpy())
+            # y = np.concatenate(y, axis=0)
+            x = torch.tensor(x).to(device)
+            y = model(x).cpu().numpy()
+        return y
     
     # Generate SHAP values
-    X_train = np.array([train_dataset[i][0].numpy() for i in range(len(train_dataset))])
-    X_test = np.array([val_dataset[i][0].numpy() for i in range(len(val_dataset))])
-    explainer = shap.KernelExplainer(model_predict, shap.sample(X_train, 5000))  # Use a subset of your data for the explainer
+    # generate X_train, X_test from val_dataset with 500 samples from each class, 
+    # pick the best 500 samples from each class to represent the class 
+    # based on the model's prediction. pick those samples with the highest softmax probability
+    X_train = []
+    result_dict = {}
+    with torch.no_grad(), torch.cuda.amp.autocast():
+        for images, targets, _ in train_data_loader:
+            images = images.to(device)
+            output = model(images)
+            pred = output.softmax(1)
+            for i in range(len(pred)):
+                label = targets[i].item()
+                if label not in result_dict:
+                    result_dict[label] = []
+                result_dict[label].append((pred[i][label].item(), images[i].cpu().numpy()))
+    for k in result_dict.keys():
+        result_dict[k] = sorted(result_dict[k], key=lambda x: x[0], reverse=True)
+        X_train += [x[1] for x in result_dict[k][:20]]
+    X_train = np.array(X_train)
+    
+    X_test = []
+    result_dict = {}
+    with torch.no_grad(), torch.cuda.amp.autocast():
+        for images, targets, _ in val_data_loader:
+            images = images.to(device)
+            output = model(images)
+            pred = output.softmax(1)
+            for i in range(len(pred)):
+                label = targets[i].item()
+                if label not in result_dict:
+                    result_dict[label] = []
+                result_dict[label].append((pred[i][label].item(), images[i].cpu().numpy()))
+    for k in result_dict.keys():
+        result_dict[k] = sorted(result_dict[k], key=lambda x: x[0], reverse=True)
+        X_test += [x[1] for x in result_dict[k][:200]]
+    X_test = np.array(X_test)   
+    
+    summarized_background = shap.sample(X_train, 100)  # Use a subset of your data for the explainer
+    explainer = shap.KernelExplainer(model_predict, summarized_background)  # Use a subset of your data for the explainer
     shap_values = explainer.shap_values(X_test)  # X_test is your test dataset
     
     feature_names = [f'Feature {i}' for i in range(X_test.shape[1])]
@@ -95,9 +144,17 @@ def main(args):
                    "Sky", "Concrete/Stone/Brick", "Pedestrian/Cyclist",
                    "Unpainted Metal", "Glass/Transparent Plastic"]
     
-    plt.figure()
-    shap_values_sum = np.sum(np.array(shap_values), axis=0)
-    shap.summary_plot(shap_values_sum, X_test, feature_names=feature_names, class_names=class_names)
+    plt.figure(figsize=(18, 12))
+    shap.summary_plot(shap_values, X_test, feature_names=feature_names, class_names=class_names)
+    # Adjust the labels and spacing
+    plt.gca().yaxis.label.set_size(12)
+    plt.gca().tick_params(axis='y', labelsize=12)
+    plt.gca().xaxis.label.set_size(12)
+    plt.gca().tick_params(axis='x', labelsize=12)
+    plt.xticks(rotation=45, ha='right')
+    plt.tight_layout()
+
+    # Save the plot
     plt.savefig("shap_summary_plot.png")
     
     
