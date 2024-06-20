@@ -17,6 +17,7 @@ from PIL import Image
 import matplotlib.pyplot as plt
 from my_dataset import *
 from torch.utils.data import DataLoader, random_split
+import scipy.io as sio
 
 
 def create_model(model_name="mlp_pixel", num_classes=2, in_chans=10, large=True):
@@ -82,17 +83,6 @@ def main(args):
         model.eval()
         # separately send the input to device for prediction
         with torch.no_grad(), torch.cuda.amp.autocast():
-            # num_batches = x.shape[0] // 100
-            # y = []
-            # for i in range(num_batches):
-            #     input_x = torch.tensor(x[i*100:(i+1)*100]).to(device)
-            #     output = model(input_x)
-            #     y.append(output.cpu().numpy())
-            # if num_batches * 100 < x.shape[0]:
-            #     input_x = torch.tensor(x[num_batches*100:]).to(device)
-            #     output = model(input_x)
-            #     y.append(output.cpu().numpy())
-            # y = np.concatenate(y, axis=0)
             x = torch.tensor(x).to(device)
             y = model(x).cpu().numpy()
         return y
@@ -112,7 +102,7 @@ def main(args):
                 label = targets[i].item()
                 if label not in result_dict:
                     result_dict[label] = []
-                result_dict[label].append((pred[i][label].item(), images[i].cpu().numpy()))
+                result_dict[label].append((pred[i][label].item(), images[i].to(dtype=torch.float).cpu().numpy()))
     for k in result_dict.keys():
         result_dict[k] = sorted(result_dict[k], key=lambda x: x[0], reverse=True)
         X_train += [x[1] for x in result_dict[k][:20]]
@@ -129,23 +119,32 @@ def main(args):
                 label = targets[i].item()
                 if label not in result_dict:
                     result_dict[label] = []
-                result_dict[label].append((pred[i][label].item(), images[i].cpu().numpy()))
+                result_dict[label].append((pred[i][label].item(), images[i].to(dtype=torch.float).cpu().numpy()))
     for k in result_dict.keys():
         result_dict[k] = sorted(result_dict[k], key=lambda x: x[0], reverse=True)
-        X_test += [x[1] for x in result_dict[k][:200]]
+        X_test += [x[1] for x in result_dict[k][:500]]
     X_test = np.array(X_test)   
     
-    summarized_background = shap.sample(X_train, 100)  # Use a subset of your data for the explainer
+    summarized_background = shap.kmeans(X_train, 180)  # Use a subset of your data for the explainer
     explainer = shap.KernelExplainer(model_predict, summarized_background)  # Use a subset of your data for the explainer
     shap_values = explainer.shap_values(X_test)  # X_test is your test dataset
+    
+    # Save the SHAP values to a csv file
+    shap_values_dict = {}
+    OSP_index = [163, 40, 58, 218, 4, 230, 76, 121, 176, 224]
+    for i, shap_array in enumerate(shap_values):
+        shap_values_dict["channel_index_{}".format(OSP_index[i])] = shap_array
+    
+    sio.savemat('shap_values.mat', {**shap_values_dict, 'X_test': X_test})
+        
     
     feature_names = [f'Feature {i}' for i in range(X_test.shape[1])]
     class_names = ["Road", "Road marks", "Vegetation", "Painted metal",
                    "Sky", "Concrete/Stone/Brick", "Pedestrian/Cyclist",
                    "Unpainted Metal", "Glass/Transparent Plastic"]
     
-    plt.figure(figsize=(18, 12))
-    shap.summary_plot(shap_values, X_test, feature_names=feature_names, class_names=class_names)
+    plt.figure(figsize=(10, 8))
+    shap.summary_plot(shap_values, X_test, feature_names=feature_names, class_names=class_names, plot_size=(10, 8))
     # Adjust the labels and spacing
     plt.gca().yaxis.label.set_size(12)
     plt.gca().tick_params(axis='y', labelsize=12)
@@ -170,12 +169,12 @@ if __name__ == "__main__":
     
     parser.add_argument('--use_MF', default=True, type=bool, help='use MF')
     parser.add_argument('--use_dual', default=True, type=bool, help='use dual')
-    parser.add_argument('--use_OSP', default=True, type=bool, help='use OSP')
+    parser.add_argument('--use_OSP', default=False, type=bool, help='use OSP')
     parser.add_argument('--use_raw', default=False, type=bool, help='use raw')
     parser.add_argument('--use_cache', default=True, type=bool, help='use cache')
     parser.add_argument('--use_rgb', default=False, type=bool, help='use rgb')
     
-    parser.add_argument('--use_attention', default=False, type=bool, help='use attention')
+    parser.add_argument('--use_attention', default=True, type=bool, help='use attention')
     parser.add_argument('--use_large_mlp', default=True, type=bool, help='use large mlp')
     parser.add_argument('--num_attention', default=10, type=int, help='num_attention')
     
@@ -213,7 +212,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--output-dir', default='./Pixel_MLP/multi_train/OSP', help='path where to save')
 
-    parser.add_argument('--resume', default='./Pixel_MLP/multi_train/HSI_drive/OSP/model_499.pth', help='resume from checkpoint')
+    parser.add_argument('--resume', default='./Pixel_MLP/multi_train/HSI_drive/atten/model_499.pth', help='resume from checkpoint')
 
     parser.add_argument(
         "--test-only",
