@@ -14,26 +14,26 @@ import matplotlib.pyplot as plt
 def custom_loss(output, target, model, lambda1, lambda2, is_train=True):
     basic_loss = F.cross_entropy(output, target, ignore_index=255)
     
-    pre_conv_trainable = any(param.requires_grad for param in model.pre_process_conv.parameters())
-    if pre_conv_trainable:
-        # L1 regularization term to encourage sparsity 
-        # and subtract the max value among the in_channels to make sure the rest of the values among the in_channels stay at 0
-        l1_regularization = torch.sum(torch.abs(model.pre_process_conv.weight))
-        # max_value = torch.sum(torch.max(torch.abs(model.module.pre_process_conv), dim=1)[0])
-        # l1_regularization -= max_value
-        l1_regularization *= lambda1 / (model.pre_process_conv.weight.numel())
+    # pre_conv_trainable = any(param.requires_grad for param in model.pre_process_conv.parameters())
+    # if pre_conv_trainable:
+    #     # L1 regularization term to encourage sparsity 
+    #     # and subtract the max value among the in_channels to make sure the rest of the values among the in_channels stay at 0
+    #     l1_regularization = torch.sum(torch.abs(model.pre_process_conv.weight))
+    #     # max_value = torch.sum(torch.max(torch.abs(model.module.pre_process_conv), dim=1)[0])
+    #     # l1_regularization -= max_value
+    #     l1_regularization *= lambda1 / (model.pre_process_conv.weight.numel())
         
-        # # Get the max value position of each in_channels, keep the same 4D shape as model.module.pre_process_conv.weight
-        # Channel_max_value_index = torch.max(torch.abs(model.pre_process_conv.weight), dim=1, keepdim=True)[1]
-        # # get a boolean tensor shape same as model.module.pre_process_conv.weight, where the max value position is 0, otherwise 1
-        # non_max_value_index = torch.ones_like(model.pre_process_conv.weight, dtype=torch.bool, device=model.pre_process_conv.weight.device)
-        # non_max_value_index.scatter_(1, Channel_max_value_index, 0)
+    #     # # Get the max value position of each in_channels, keep the same 4D shape as model.module.pre_process_conv.weight
+    #     # Channel_max_value_index = torch.max(torch.abs(model.pre_process_conv.weight), dim=1, keepdim=True)[1]
+    #     # # get a boolean tensor shape same as model.module.pre_process_conv.weight, where the max value position is 0, otherwise 1
+    #     # non_max_value_index = torch.ones_like(model.pre_process_conv.weight, dtype=torch.bool, device=model.pre_process_conv.weight.device)
+    #     # non_max_value_index.scatter_(1, Channel_max_value_index, 0)
         
-        # # Custom penalty term to encourage weights to be close to 0 if is not the max value position, otherwise 1
-        # penalty = lambda2 * (torch.mean(torch.abs(model.pre_process_conv.weight) * non_max_value_index) + 
-        #                     torch.mean(torch.abs(1 - model.pre_process_conv.weight) * (~non_max_value_index)))
+    #     # # Custom penalty term to encourage weights to be close to 0 if is not the max value position, otherwise 1
+    #     # penalty = lambda2 * (torch.mean(torch.abs(model.pre_process_conv.weight) * non_max_value_index) + 
+    #     #                     torch.mean(torch.abs(1 - model.pre_process_conv.weight) * (~non_max_value_index)))
         
-        basic_loss = basic_loss + l1_regularization
+    #     basic_loss = basic_loss + l1_regularization
     
     # Calculate the accuracy of each pixel
     accuracy = (output.argmax(1)[target != 255] == target[target != 255]).float().mean()

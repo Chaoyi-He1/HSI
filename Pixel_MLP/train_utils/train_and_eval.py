@@ -37,7 +37,7 @@ def evaluate(model, data_loader, device, num_classes, scaler=None, epoch=0, IoU=
     all_preds, all_labels = [], []
     
     with torch.no_grad(), torch.cuda.amp.autocast(enabled=scaler is not None):
-        for image, target, _ in metric_logger.log_every(data_loader, 10, header):
+        for image, target, _ in metric_logger.log_every(data_loader, 50, header):
             image, target = image.to(device), target.to(device)
             output = model(image)
             
@@ -89,7 +89,7 @@ def evaluate_sr(model, data_loader, device, num_classes, scaler=None, epoch=0):
     all_preds, all_preds_sr, all_labels = [], [], []
     
     with torch.no_grad(), torch.cuda.amp.autocast(enabled=scaler is not None):
-        for image, target, img_pos in metric_logger.log_every(data_loader, 10, header):
+        for image, target, img_pos in metric_logger.log_every(data_loader, 50, header):
             image, target = image.to(device), target.to(device)
             output = model(image)
             

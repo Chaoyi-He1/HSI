@@ -27,13 +27,13 @@ def save_conv_weights(model, save_path):
         pd.DataFrame(save_mtx).to_csv(file_name, index=False, header=False)
         
 
-def create_model(in_chans, num_classes, model="FCNN_lite"):
+def create_model(in_chans, num_classes, model="Unet"):
     if model == 'FCNN_lite':
         model = FCNN_lite(in_ch=in_chans, num_classes=num_classes)
     elif model == 'FCNN_4':
         model = FCNN_4(in_ch=in_chans, num_classes=num_classes)
     elif model == 'Unet':
-        model = UNet(in_channels=in_chans, num_classes=num_classes, base_c=8)
+        model = UNet(in_channels=in_chans, num_classes=num_classes, base_c=16)
     return model
 
 
@@ -100,7 +100,7 @@ def main(args):
     print(args)
     # if args.rank in [-1, 0]:
     print('Start Tensorboard with "tensorboard --logdir=runs", view at http://localhost:6006/')
-    tb_writer = SummaryWriter(log_dir="runs/HSI_drive/9 cls/in_sensor/{}".format(datetime.datetime.now().strftime('%Y%m%d-%H%M%S')))
+    tb_writer = SummaryWriter(log_dir="runs/HSI_drive/9 cls/u_net/{}".format(datetime.datetime.now().strftime('%Y%m%d-%H%M%S')))
 
     device = torch.device(args.device)
 
@@ -149,7 +149,9 @@ def main(args):
     if args.use_rgb:
         in_chans = 3
     elif args.use_OSP:
-        in_chans = 10
+        in_chans = args.num_attention
+    elif args.use_attention:
+        in_chans = args.num_attention
     elif not args.use_OSP and args.use_dual and not args.use_raw:
         in_chans = 252
     elif not args.use_OSP and not args.use_dual and not args.use_raw:
@@ -270,11 +272,11 @@ if __name__ == "__main__":
     parser.add_argument('--img_type', default='ALL', help='image type: OSP or ALL or rgb')
     parser.add_argument('--name', default='', help='renames results.txt to results_name.txt if supplied')
     
-    parser.add_argument('--use_MF', default=False, type=bool, help='use MF')
+    parser.add_argument('--use_MF', default=True, type=bool, help='use MF')
     parser.add_argument('--use_dual', default=True, type=bool, help='use dual')
     parser.add_argument('--use_OSP', default=False, type=bool, help='use OSP')
     parser.add_argument('--use_raw', default=False, type=bool, help='use raw')
-    parser.add_argument('--use_rgb', default=False, type=bool, help='use rgb')
+    parser.add_argument('--use_rgb', default=True, type=bool, help='use rgb')
     
     parser.add_argument('--use_attention', default=False, type=bool, help='use attention')
     parser.add_argument('--use_large_mlp', default=False, type=bool, help='use large mlp')
@@ -311,7 +313,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--print-freq', default=5, type=int, help='print frequency')
 
-    parser.add_argument('--output-dir', default='./FCNN_HSI/multi_train/HSI_drive/', help='path where to save')
+    parser.add_argument('--output-dir', default='./FCNN_HSI/multi_train/HSI_drive/rgb/', help='path where to save')
 
     parser.add_argument('--resume', default='', help='resume from checkpoint')
 

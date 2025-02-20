@@ -131,7 +131,7 @@ def main(args):
     
     # Save the SHAP values to a csv file
     shap_values_dict = {}
-    OSP_index = [163, 40, 58, 218, 4, 230, 76, 121, 176, 224]
+    OSP_index = [42, 34, 16, 230, 95, 243, 218, 181, 11, 193]
     for i, shap_array in enumerate(shap_values):
         shap_values_dict["channel_index_{}".format(OSP_index[i])] = shap_array
     
@@ -169,12 +169,12 @@ if __name__ == "__main__":
     
     parser.add_argument('--use_MF', default=True, type=bool, help='use MF')
     parser.add_argument('--use_dual', default=True, type=bool, help='use dual')
-    parser.add_argument('--use_OSP', default=False, type=bool, help='use OSP')
+    parser.add_argument('--use_OSP', default=True, type=bool, help='use OSP')
     parser.add_argument('--use_raw', default=False, type=bool, help='use raw')
     parser.add_argument('--use_cache', default=True, type=bool, help='use cache')
     parser.add_argument('--use_rgb', default=False, type=bool, help='use rgb')
     
-    parser.add_argument('--use_attention', default=True, type=bool, help='use attention')
+    parser.add_argument('--use_attention', default=False, type=bool, help='use attention')
     parser.add_argument('--use_large_mlp', default=True, type=bool, help='use large mlp')
     parser.add_argument('--num_attention', default=10, type=int, help='num_attention')
     
@@ -212,7 +212,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--output-dir', default='./Pixel_MLP/multi_train/OSP', help='path where to save')
 
-    parser.add_argument('--resume', default='./Pixel_MLP/multi_train/HSI_drive/atten/model_499.pth', help='resume from checkpoint')
+    parser.add_argument('--resume', default='./Pixel_MLP/multi_train/HSI_drive/OSP/model_499.pth', help='resume from checkpoint')
 
     parser.add_argument(
         "--test-only",

@@ -22,7 +22,7 @@ def main(args):
     # if args.rank in [-1, 0]:
     print('Start Tensorboard with "tensorboard --logdir=runs", view at http://localhost:6006/')
     # Save tb_writer to runs/HSI_drive/times
-    tb_writer = SummaryWriter(log_dir="runs/HSI_drive/9 cls/Dual_OSP/{}".format(datetime.datetime.now().strftime('%Y%m%d-%H%M%S')))
+    tb_writer = SummaryWriter(log_dir="runs/HSI_drive/9 cls/Dual_OSP/new/{}".format(datetime.datetime.now().strftime('%Y%m%d-%H%M%S')))
 
     device = torch.device(args.device)
     
@@ -221,13 +221,13 @@ if __name__ == "__main__":
     
     parser.add_argument('--use_MF', default=True, type=bool, help='use MF')
     parser.add_argument('--use_dual', default=True, type=bool, help='use dual')
-    parser.add_argument('--use_OSP', default=False, type=bool, help='use OSP')
+    parser.add_argument('--use_OSP', default=True, type=bool, help='use OSP')
     parser.add_argument('--use_raw', default=False, type=bool, help='use raw')
     parser.add_argument('--use_cache', default=True, type=bool, help='use cache')
     parser.add_argument('--use_rgb', default=False, type=bool, help='use rgb')
     
     parser.add_argument('--use_attention', default=False, type=bool, help='use attention')
-    parser.add_argument('--use_large_mlp', default=False, type=bool, help='use large mlp')
+    parser.add_argument('--use_large_mlp', default=True, type=bool, help='use large mlp')
     parser.add_argument('--num_attention', default=10, type=int, help='num_attention')
     
     parser.add_argument('--use_sr', default=False, type=bool, help='use sr')
@@ -260,9 +260,9 @@ if __name__ == "__main__":
                         metavar='W', help='weight decay (default: 1e-4)',
                         dest='weight_decay')
 
-    parser.add_argument('--print-freq', default=5, type=int, help='print frequency')
+    parser.add_argument('--print-freq', default=50, type=int, help='print frequency')
 
-    parser.add_argument('--output-dir', default='./Pixel_MLP/multi_train/HSI_drive/OSP', help='path where to save')
+    parser.add_argument('--output-dir', default='./Pixel_MLP/multi_train/HSI_drive/OSP/large/', help='path where to save')
 
     parser.add_argument('--resume', default='./Pixel_MLP/multi_train/HSI_drive/OSP/model_200', help='resume from checkpoint')
 
