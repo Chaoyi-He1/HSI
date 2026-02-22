@@ -13,6 +13,7 @@ SVR_weights/
 /fcn/src/__pycache__/
 /u2net/__pycache__/
 /Support_Vector_Regression/__pycache__/
+/Up_seg/HSI_drive/
 *.txt
 *.pyc
 *.log

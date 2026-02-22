@@ -119,6 +119,13 @@ def evaluate(model: nn.Module,
     header = 'Test:'
     all_preds, all_labels = [], []
     
+    # add gaussian noise to each layer of the model. after eval, remove it
+    noise = {n: torch.randn_like(p) * 0.0001 for n, p in model.named_parameters()}
+    with torch.no_grad():
+        with torch.amp.autocast(device_type="cuda", enabled=scaler is not None):
+            for n, p in model.named_parameters():
+                p.add_(noise[n])
+                
     with torch.no_grad(), torch.cuda.amp.autocast(enabled=scaler is not None):
         for images, targets, _ in metric_logger.log_every(data_loader, 10, header):
             images, targets = images.to(device), targets.to(device)
@@ -134,7 +141,11 @@ def evaluate(model: nn.Module,
             metric_logger.update(loss=basic_loss.item())
             metric_logger.update(acc=accuracy.item())
             confmat.update(targets[targets != 255].flatten(), output.argmax(1)[targets != 255].flatten())
-        
+    # remove the noise
+    with torch.no_grad():
+        for n, p in model.named_parameters():
+            p.add_(-noise[n])
+            
     metric_logger.synchronize_between_processes()
     confmat.reduce_from_all_processes()
     print("Averaged stats:", metric_logger)

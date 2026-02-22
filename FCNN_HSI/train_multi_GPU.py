@@ -313,7 +313,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--print-freq', default=5, type=int, help='print frequency')
 
-    parser.add_argument('--output-dir', default='./FCNN_HSI/multi_train/HSI_drive/rgb/', help='path where to save')
+    parser.add_argument('--output-dir', default='./FCNN_HSI/multi_train/HSI_drive/rgb/simu/', help='path where to save')
 
     parser.add_argument('--resume', default='', help='resume from checkpoint')
 

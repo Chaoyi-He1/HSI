@@ -818,8 +818,8 @@ class HSI_Drive_V1_(data.Dataset):
         data_dict_selected = {}
         for k, v in data_dict.items():
             v = np.array(v)
-            if len(v) > 50000:
-                data_dict_selected[k] = v[np.random.choice(len(v), 50000, replace=False), :]
+            if len(v) > 5000:
+                data_dict_selected[k] = v[np.random.choice(len(v), 5000, replace=False), :]
             else:
                 data_dict_selected[k] = v
         del data_dict
@@ -861,10 +861,12 @@ class HSI_Drive_V1_(data.Dataset):
             img = torch.from_numpy(img).to(dtype=torch.float32)
             label = torch.from_numpy(label).to(dtype=int)
         elif self.use_cache:
-            img = torch.from_numpy(self.data_list[index]).to(dtype=torch.float16)
+            img = torch.from_numpy(self.data_list[index]).to(dtype=torch.float32)
             label = torch.tensor(self.label_list[index], dtype=torch.int64)
             img_pos = None
-
+        # rescale img to uint8
+        # img = (img - img.min()) / (img.max() - img.min()) * 255.0
+        # img = img.to(dtype=torch.uint8).to(dtype=torch.float32)
         return img, label, img_pos
     
     def __len__(self):

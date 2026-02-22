@@ -22,7 +22,7 @@ def main(args):
     # if args.rank in [-1, 0]:
     print('Start Tensorboard with "tensorboard --logdir=runs", view at http://localhost:6006/')
     # Save tb_writer to runs/HSI_drive/times
-    tb_writer = SummaryWriter(log_dir="runs/HSI_drive/9 cls/Dual_OSP/new/{}".format(datetime.datetime.now().strftime('%Y%m%d-%H%M%S')))
+    tb_writer = SummaryWriter(log_dir="runs/HSI_drive/9 cls/RGB/new/{}".format(datetime.datetime.now().strftime('%Y%m%d-%H%M%S')))
 
     device = torch.device(args.device)
     
@@ -205,8 +205,19 @@ def main(args):
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print('Training time {}'.format(total_time_str))
     
-    atten_weights = model_without_ddp.atten.detach().cpu().numpy()
-    np.savetxt('atten_weights_lite_mlp.csv', atten_weights, delimiter=',')
+    # plot model parameters histogram and save to .png
+    params = [p.detach().cpu().numpy().flatten() for p in model.parameters() if p.requires_grad]
+    import matplotlib.pyplot as plt
+    plt.figure(figsize=(10, 5))
+    plt.hist(np.hstack(params), bins=100)
+    plt.title('Model Parameters Histogram')
+    plt.xlabel('Parameter Value')
+    plt.ylabel('Frequency')
+    # save to this python file's directory
+    plt.savefig(os.path.join(os.path.dirname(__file__), 'model_parameters_histogram.png'))
+    
+    # atten_weights = model_without_ddp.atten.detach().cpu().numpy()
+    # np.savetxt('atten_weights_lite_mlp.csv', atten_weights, delimiter=',')
     
 
 if __name__ == "__main__":
@@ -221,12 +232,12 @@ if __name__ == "__main__":
     
     parser.add_argument('--use_MF', default=True, type=bool, help='use MF')
     parser.add_argument('--use_dual', default=True, type=bool, help='use dual')
-    parser.add_argument('--use_OSP', default=True, type=bool, help='use OSP')
+    parser.add_argument('--use_OSP', default=False, type=bool, help='use OSP')
     parser.add_argument('--use_raw', default=False, type=bool, help='use raw')
     parser.add_argument('--use_cache', default=True, type=bool, help='use cache')
     parser.add_argument('--use_rgb', default=False, type=bool, help='use rgb')
     
-    parser.add_argument('--use_attention', default=False, type=bool, help='use attention')
+    parser.add_argument('--use_attention', default=True , type=bool, help='use attention')
     parser.add_argument('--use_large_mlp', default=True, type=bool, help='use large mlp')
     parser.add_argument('--num_attention', default=10, type=int, help='num_attention')
     
@@ -262,7 +273,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--print-freq', default=50, type=int, help='print frequency')
 
-    parser.add_argument('--output-dir', default='./Pixel_MLP/multi_train/HSI_drive/OSP/large/', help='path where to save')
+    parser.add_argument('--output-dir', default='./Pixel_MLP/multi_train/HSI_drive/rgb/large/', help='path where to save')
 
     parser.add_argument('--resume', default='./Pixel_MLP/multi_train/HSI_drive/OSP/model_200', help='resume from checkpoint')
 

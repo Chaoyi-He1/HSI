@@ -14,6 +14,9 @@ import torch.utils.data as data
 from PIL import Image
 import matplotlib.pyplot as plt
 from my_dataset import *
+from sklearn.metrics import confusion_matrix
+import train_utils.distributed_utils as utils
+import seaborn as sn
 
 
 def create_model(model_name="mlp_pixel", num_classes=2, in_chans=10, large=True):
@@ -112,13 +115,32 @@ def main(args):
     num_classes = args.num_classes
     
     model = create_model(num_classes=num_classes, in_chans=in_chans, large=args.use_large_mlp)
-    model.to(device)
+    # model.to(device)
     
-    checkpoint = torch.load(args.resume, map_location='cpu')
+    checkpoint = torch.load(args.resume, map_location='cpu', weights_only=False)
     args.start_epoch = checkpoint['epoch'] + 1
     model.load_state_dict(checkpoint['model'])
     
+    # export to onnx
+    model.eval()
+    dummy_input = torch.randn(1, 1, 1, 10)
+    torch.onnx.export(model, dummy_input,
+                    "./cnn_mnist_raw.onnx",
+                    export_params=True, opset_version=16, dynamic_axes={'input': {0: 'batch_size'}, 'sensor_out': {0: 'batch_size'}},
+                    input_names=['input'], output_names=['sensor_out'])
+    model.to(device)
+    
+    confmat = utils.ConfusionMatrix(num_classes, device)
+    
+    # add a gaussian noise to the model each layer
+    # for name, param in model.named_parameters():
+    #     noise = torch.randn_like(param) * 0.001  # Adjust the noise scale as needed
+    #     param.data += noise.to(device)
+        
+    save_data, save_label, save_rgb, save_pred = [], [], [], []
     for image, target, img_pos, rgb_img, name in val_data_loader:
+        if not ("nf3231_102" in name or "nf4332_167" in name):
+            continue
         # transform img to tensor, use model to predict in gpu
         image, target = image.to(device), target.to(device)
         
@@ -126,6 +148,18 @@ def main(args):
             pred = model(image) # pred: (-1, 10, dim)
             
         pred = torch.argmax(pred, dim=-1)
+
+        confmat.update(target, pred)
+
+        # accuracy print
+        acc = (pred[target != 255] == target[target != 255]).float().mean().item()
+        print(f"Image: {name[0]}, Accuracy: {acc:.4f}")
+        
+        # append the data to save_data, save_label, save_rgb
+        save_data.append(image.cpu().numpy())
+        save_label.append(target.cpu().numpy())
+        save_rgb.append(rgb_img)
+        save_pred.append(pred.cpu().numpy())
         
         img_pos = np.reshape(img_pos, (216, 409, 2))
         img_original_label = target.view(216, 409).cpu().numpy()
@@ -171,9 +205,32 @@ def main(args):
         if not os.path.exists(os.path.join(args.output_dir, "pred")):
             os.makedirs(os.path.join(args.output_dir, "pred"))
         Image.fromarray(pred.astype(np.uint8)).save(os.path.join(args.output_dir, "pred", name[0] + ".png"))
-        
-        
     
+    # save the data, label, rgb as npz 
+    save_data = np.concatenate(save_data, axis=0)
+    save_label = np.concatenate(save_label, axis=0)
+    save_rgb = np.concatenate(save_rgb, axis=0)
+    save_pred = np.concatenate(save_pred, axis=0)
+    
+    # generate the confusion matrix and calculate mean IoU
+    val_info = str(confmat)
+    print(val_info)
+    # save cfmtx as a svg picture
+    confusion_matrix_total = confusion_matrix(save_label[save_label != 255], save_pred[save_label != 255])
+    classes = ["Road", "Road marks", "Vegetation", "Painted Metal", "Sky", "Concrete/Stone/Brick", "Pedestrian/Cyclist", "Unpainted Metal", "Glass/Transparent Plastic"]
+    # classes = ["Sky", "Background"]
+    df_cm = pd.DataFrame(confusion_matrix_total / \
+                            (np.sum(confusion_matrix_total, axis=1)[:, None] + \
+                                (np.sum(confusion_matrix_total, axis=1) == 0).astype(int)[:, None]), 
+                         index=[i for i in classes],
+                         columns=[i for i in classes])
+    # save the df_cm as a .csv file
+    df_cm.to_csv(os.path.join(args.output_dir, "confusion_matrix.csv"))
+    plt.figure(figsize=(12, 10))
+    fig = sn.heatmap(df_cm, annot=True).get_figure()
+    fig.savefig(os.path.join(args.output_dir, "confusion_matrix.svg"))
+    plt.close(fig)
+
 if __name__ == "__main__":
     import argparse
 
@@ -186,12 +243,12 @@ if __name__ == "__main__":
     
     parser.add_argument('--use_MF', default=True, type=bool, help='use MF')
     parser.add_argument('--use_dual', default=True, type=bool, help='use dual')
-    parser.add_argument('--use_OSP', default=True, type=bool, help='use OSP')
+    parser.add_argument('--use_OSP', default=False, type=bool, help='use OSP')
     parser.add_argument('--use_raw', default=False, type=bool, help='use raw')
     parser.add_argument('--use_cache', default=False, type=bool, help='use cache')
     parser.add_argument('--use_rgb', default=False, type=bool, help='use rgb')
     
-    parser.add_argument('--use_attention', default=False, type=bool, help='use attention')
+    parser.add_argument('--use_attention', default=True, type=bool, help='use attention')
     parser.add_argument('--use_large_mlp', default=True, type=bool, help='use large mlp')
     parser.add_argument('--num_attention', default=10, type=int, help='num_attention')
     
@@ -227,9 +284,9 @@ if __name__ == "__main__":
 
     parser.add_argument('--print-freq', default=5, type=int, help='print frequency')
 
-    parser.add_argument('--output-dir', default='./Pixel_MLP/multi_train/OSP', help='path where to save')
+    parser.add_argument('--output-dir', default='./Pixel_MLP/multi_train/', help='path where to save')
 
-    parser.add_argument('--resume', default='./Pixel_MLP/multi_train/HSI_drive/OSP/model_499.pth', help='resume from checkpoint')
+    parser.add_argument('--resume', default='./Pixel_MLP/multi_train/HSI_drive/rgb/large/model_156.pth', help='resume from checkpoint')
 
     parser.add_argument(
         "--test-only",

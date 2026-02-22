@@ -1,25 +1,49 @@
 {
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Current File",
+            "name": "Python: Current File (conda)",
             "type": "debugpy",
             "request": "launch",
-            "program": "/home/grads/c/chaoyi_he/Desktop/python3.8_env/bin/torchrun",
+            "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": true,
+            "env": {
+                "PATH": "/home/grads/c/chaoyi_he/Desktop/conda/envs/hsi/bin:$PATH"
+            },
             "args": [
-                "--nproc_per_node", "2", 
-                // "--use_env",
-                // "./Support_Vector_Regression/main.py",
-                // "./u2net_for_atten_preprocess/train_multi_GPU.py",
-                "./Pixel_MLP/train_HSI_drive.py",
+                // "./Up_seg/main.py",
                 // "./FCNN_HSI/train_multi_GPU.py",
                 // "--img_type", "OSP",
             ]
         }
     ]
 }
+// {
+//     // Use IntelliSense to learn about possible attributes.
+//     // Hover to view descriptions of existing attributes.
+//     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+//     "version": "0.2.0",
+//     "configurations": [
+//         {
+//             "name": "Python: Current File",
+//             "type": "debugpy",
+//             "request": "launch",
+//             "program": "/home/grads/c/chaoyi_he/Desktop/python3.8_env/bin/torchrun",
+//             "console": "integratedTerminal",
+//             "justMyCode": true,
+//             "args": [
+//                 // "--nproc_per_node", "2", 
+//                 // "--use_env",
+//                 // "./Support_Vector_Regression/main.py",
+//                 // "./u2net_for_atten_preprocess/train_multi_GPU.py",
+//                 "./Up_seg/main.py",
+//                 // "./FCNN_HSI/train_multi_GPU.py",
+//                 // "--img_type", "OSP",
+//             ]
+//         }
+//     ]
+// }
+
+// vs code launch.json using conda from ~/Desktop/conda/bin/activate, then activate the conda env "hsi"
+// add args to the debug configuration

@@ -9,6 +9,24 @@ import train_utils.distributed_utils as utils
 from scipy.ndimage import generic_filter
 
 
+def quantize_regularize(model, device, alpha=0.0001, interval=0.01):
+    central_params = torch.arange(0.0, 2+interval, interval).to(device)
+    reg_params = {}
+    for c in central_params:
+        if c == 0.0:
+            reg_params[c] = [p.abs() < interval / 2 for n, p in model.named_parameters()]
+        if c == 1.0:
+            reg_params[c] = [p.abs() > 1 - interval / 2 for n, p in model.named_parameters()]
+        else:
+            reg_params[c] = [(c - interval / 2 <= p.abs()) & (p.abs() < c + interval / 2) for n, p in model.named_parameters()]
+
+    reg_loss = 0.0
+    for c, params in reg_params.items():
+        reg_loss += alpha * torch.sum(torch.stack([torch.sum((p[params[i]].abs() - c).abs()) for i, (n, p) in enumerate(model.named_parameters())]))
+
+    return reg_loss
+
+
 def criterion(inputs, target, model, num_classes=6):
     losses = nn.functional.binary_cross_entropy_with_logits(inputs, target) if inputs.shape[-1] <= 1 \
         else nn.functional.cross_entropy(inputs, target, ignore_index=255)
@@ -24,6 +42,9 @@ def criterion(inputs, target, model, num_classes=6):
         # num_ones = torch.sum(torch.abs(model.atten))
         # deviation = torch.abs(num_ones - 10)
         return losses + L1_norm, accuracy
+    # reg_loss = quantize_regularize(model, inputs.device)
+    # losses += reg_loss if model.training else 0.0
+    
     return losses, accuracy
 
 
@@ -36,8 +57,15 @@ def evaluate(model, data_loader, device, num_classes, scaler=None, epoch=0, IoU=
     header = 'Test:'
     all_preds, all_labels = [], []
     
+    # add gaussian noise to the model's each layer, after the eval, subtract the moise
+    noise = {n: torch.randn_like(p) * 0.0001 for n, p in model.named_parameters()}
+    with torch.no_grad():
+        with torch.amp.autocast(device_type="cuda", enabled=scaler is not None):
+            for n, p in model.named_parameters():
+                p.add_(noise[n])
+                
     with torch.no_grad(), torch.cuda.amp.autocast(enabled=scaler is not None):
-        for image, target, _ in metric_logger.log_every(data_loader, 50, header):
+        for image, target, _ in metric_logger.log_every(data_loader, 500, header):
             image, target = image.to(device), target.to(device)
             output = model(image)
             
@@ -49,7 +77,12 @@ def evaluate(model, data_loader, device, num_classes, scaler=None, epoch=0, IoU=
             metric_logger.update(loss=loss.item(), acc=acc.item())
             if IoU:
                 confmat.update(target.flatten(), output.argmax(-1).flatten())
-    
+
+    # remove the noise
+    with torch.no_grad():
+        for n, p in model.named_parameters():
+            p.add_(-noise[n])
+
     metric_logger.synchronize_between_processes()
     if IoU:
         confmat.reduce_from_all_processes()
