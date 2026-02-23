@@ -10,8 +10,6 @@ Conventional vision systems separate sensing from computation, producing large d
 
 ![ECHSE overview](assets/overview.png)
 
-
-
 This repository provides:
 
 - **Post-sensor neural network models** for semantic segmentation on hyperspectral data (Pixel MLP, Transformer, FCNN)
