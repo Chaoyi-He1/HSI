@@ -20,9 +20,7 @@ This repository provides:
 Compared with conventional AI vision pipelines, ECHSE reduces data transmission by more than an order of magnitude while maintaining high classification accuracy, offering a materials-to-system pathway toward compact, high-speed, energy-efficient intelligent vision for edge applications.
 
 ![Figure 5a](assets/Picture1.jpeg)
-
 ---
-
 ## Directory Structure
 
 This repository contains the **ECHSE codebase**  (ECHSE experiments for HSI Drive and pixel-level models):
