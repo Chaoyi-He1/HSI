@@ -1,7 +1,7 @@
 # Electrochromic Hyperspectral Embedding (ECHSE) for Ultra-Compact Intelligent Vision
 
 Repository containing code and experiments for **Electrochromic Hyperspectral Embedding (ECHSE)** — an in-sensor computing framework that adaptively compresses spectral information at the pixel level for compact, energy-efficient intelligent vision.
-
+ 
 ---
 
 ## Overview
