@@ -27,23 +27,22 @@ Compared with conventional AI vision pipelines, ECHSE reduces data transmission 
 
 ## Directory Structure
 
+This repository contains the **ECHSE codebase**  (ECHSE experiments for HSI Drive and pixel-level models):
+
 ```
-HSI/
-├── EC_dataset/                    # ECHSE experiments (HSI Drive, pixel-level models)
-│   ├── Pixel_MLP/                 # Pixel MLP & Transformer training and evaluation
-│   │   ├── src/                   # model.py, transformer_model.py
-│   │   ├── train_utils/            # training loops, evaluation, LR scheduler
-│   │   ├── test_IoU_for_R.py      # train or evaluate; IoU vs R matrix index
-│   │   ├── my_dataset.py           # HSI_Drive_V1_ dataset (OSP, dual, attention, raw)
-│   │   └── multi_train/           # checkpoints, confusion matrices, logs
-│   ├── FCNN_HSI/                  # Fully convolutional network (FCNN) models
-│   ├── Up_seg/                    # U-Net–style segmentation
-│   ├── bandselection_in_subforder.m
-│   ├── bandPCA_in_subforder.m
-│   └── ...
-├── Diffu/                         # Hyperspectral diffusion models (U2Net, VAE, latent)
-├── ECHSE_Manuscripts_20251221v4_Clean.docx
-└── ECHSE_SI_20260217.docx
+├── Pixel_MLP/                 # Pixel MLP & Transformer training and evaluation
+│   ├── src/                    # model.py, transformer_model.py
+│   ├── train_utils/            # training loops, evaluation, LR scheduler
+│   ├── test_IoU_for_R.py       # evaluate; IoU vs R matrix index
+│   ├── train_HSI_drive.py      # training script
+│   ├── my_dataset.py           # HSI_Drive_V1_ dataset (OSP, dual, attention, raw)
+│   └── multi_train/            # checkpoints, confusion matrices, logs
+├── FCNN_HSI/                   # Fully convolutional network (FCNN) models
+├── Up_seg/                     # U-Net–style segmentation
+├── bandselection_in_subforder.m
+├── bandPCA_in_subforder.m
+├── assets/                     # figures (overview, results)
+└── ...
 ```
 
 ---
@@ -54,7 +53,7 @@ HSI/
 
 ```bash
 git clone <repository-url>
-cd HSI
+cd EC_dataset
 ```
 
 ### 2. Environment
@@ -76,7 +75,7 @@ pip install numpy scipy matplotlib pandas tensorboard Pillow
 
 Place the **HSI Drive** dataset (or your HSI dataset with the same structure) at a path of your choice. To download our dataset, please use [this link](INSERT_DATASET_LINK_HERE).
 
-Adjust `--data_path` in the training/evaluation scripts accordingly. The dataset loader in `EC_dataset/Pixel_MLP/my_dataset.py` supports:
+Adjust `--data_path` in the training/evaluation scripts accordingly. The dataset loader in `Pixel_MLP/my_dataset.py` supports:
 
 - **OSP** (orthogonal subspace projection) and **PCA**-style reduced channels  
 - **Dual-capture** (e.g. 252 channels)  
@@ -92,10 +91,9 @@ See the manuscript and SI (e.g. Fig. S18, HSI-Drive flow) for the intended ECHSE
 
 ### Training (Pixel MLP)
 
-From the `EC_dataset` directory, run training with `train_HSI_drive.py`:
+From the repository root, run training with `train_HSI_drive.py`:
 
 ```bash
-cd EC_dataset
 python Pixel_MLP/train_HSI_drive.py --data_path /path/to/HSI_Drive/v1/ \
   --output-dir ./Pixel_MLP/multi_train/HSI_drive/atten/large/ \
   --epochs 500 --use_attention True --use_large_mlp True
@@ -111,19 +109,17 @@ Key flags:
 
 ### Evaluation and IoU sweep for R matrix with variation
 
-Run from the `EC_dataset` directory. `test_IoU_for_R.py` loads one checkpoint and evaluates it across one or more R matrix indices, then writes per-class IoU to a CSV.
+`test_IoU_for_R.py` loads one checkpoint and evaluates it across one or more R matrix indices, then writes per-class IoU to a CSV. Run from the repository root.
 
 Single R index (e.g. R=1 only):
 
 ```bash
-cd EC_dataset
 python Pixel_MLP/test_IoU_for_R.py --R_start 1 --R_end 1 --resume ./Pixel_MLP/multi_train/HSI_drive/atten/large/R_1/model_499.pth --output_csv ./Pixel_MLP/R_IoU.csv
 ```
 
-Sweep over R indices 1–32 (default; one row per R in the CSV):
+Sweep over R indices 1–32 (one row per R in the CSV):
 
 ```bash
-cd EC_dataset
 python Pixel_MLP/test_IoU_for_R.py --R_start 1 --R_end 32 --output_csv ./Pixel_MLP/R_IoU.csv --resume /path/to/checkpoint.pth
 ```
 
@@ -146,13 +142,13 @@ Representative results on **HSI Drive** semantic segmentation (9 classes) with t
 
 ![Figure 4](assets/figure4.png)
 
-Per-class IoU (example for best R index, see `EC_dataset/Pixel_MLP/R_IoU.csv`):
+Per-class IoU (example for best R index, see `Pixel_MLP/R_IoU.csv`):
 
 - Road, Road marks, Vegetation, Painted Metal, Sky, Concrete/Stone/Brick, Pedestrian/Cyclist, Unpainted Metal, Glass/Transparent Plastic
 
 Confusion matrix and segmentation examples are provided in the manuscript and SI (Figs. S19, S20). SHAP analysis for spectral band importance is in Fig. S21.
 
-Result figures (confusion matrices, segmentation examples, SHAP contributions) are in the manuscript and Supplementary Information. Running evaluation saves `confusion_matrix.csv` and `confusion_matrix.svg` under `EC_dataset/Pixel_MLP/multi_train/` (if that directory is not excluded).
+Result figures (confusion matrices, segmentation examples, SHAP contributions) are in the manuscript and Supplementary Information. Running evaluation saves `confusion_matrix.csv` and `confusion_matrix.svg` under `Pixel_MLP/multi_train/`.
 
 ---
 
@@ -170,7 +166,7 @@ If you use this code or the ECHSE framework in your work, please cite the manusc
   author  = {Ran Li and Chaoyi He and Yi Huang and Enzi Zhai and Vinod K. Sangwan and Jingyi Zou and Kevin St. Luce and Jianzhou Cui and Rex Kim and Roland Liu and Zhixing Wang and Xi Ling and Helen Xie and Xu Zhang and Mark C. Hersam and Qiangfei Xia and Linda Katehi and Yuxuan Cosmi Lin},
   journal = {},
   year    = {},
-  note    = {Manuscript and Supplementary Information in repository}
+  note    = {Manuscript and Supplementary Information available from the authors}
 }
 ```
 
