@@ -9,7 +9,7 @@ Repository containing code and experiments for **Electrochromic Hyperspectral Em
 Conventional vision systems separate sensing from computation, producing large data streams that increase power consumption and system complexity. **ECHSE** exploits electrically tunable photocurrent responses in electrochromic photodetectors so that each pixel can selectively encode its most task-relevant spectral components before readout. The resulting low-dimensional outputs interface with lightweight analogue computing hardware for efficient inference.
 
 ![ECHSE overview](assets/overview.png)
-![ECHSE sensor performance](assets/result_figure.png)
+
 
 
 This repository provides:
@@ -78,7 +78,6 @@ Place the **HSI Drive** dataset (or your HSI dataset with the same structure) at
 Adjust `--data_path` in the training/evaluation scripts accordingly. The dataset loader in `Pixel_MLP/my_dataset.py` supports:
 
 - **OSP** (orthogonal subspace projection) and **PCA**-style reduced channels  
-- **Dual-capture** (e.g. 252 channels)  
 - **Attention-weighted** channels (learned or fixed R matrices)  
 - **Raw** band subsets  
 - **RGB** (3 channels)
