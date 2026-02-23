@@ -9,7 +9,6 @@ Repository containing code and experiments for **Electrochromic Hyperspectral Em
 Conventional vision systems separate sensing from computation, producing large data streams that increase power consumption and system complexity. **ECHSE** exploits electrically tunable photocurrent responses in electrochromic photodetectors so that each pixel can selectively encode its most task-relevant spectral components before readout. The resulting low-dimensional outputs interface with lightweight analogue computing hardware for efficient inference.
 
 ![ECHSE overview](assets/overview.png)
-
 This repository provides:
 
 - **Post-sensor neural network models** for semantic segmentation on hyperspectral data (Pixel MLP, Transformer, FCNN)
@@ -164,10 +163,6 @@ If you use this code or the ECHSE framework in your work, please cite the manusc
   note    = {Manuscript and Supplementary Information available from the authors}
 }
 ```
-
-*(Update `journal` and `year` upon publication.)*
-
----
 
 ## License
 
