@@ -134,8 +134,6 @@ Representative results on **HSI Drive** semantic segmentation (9 classes) with t
 | Accuracy  | ~86.3% |
 | Mean IoU  | ~76.4% |
 
-![Figure 4](assets/figure4.png)
-
 Per-class IoU (example for best R index, see `Pixel_MLP/R_IoU.csv`):
 
 - Road, Road marks, Vegetation, Painted Metal, Sky, Concrete/Stone/Brick, Pedestrian/Cyclist, Unpainted Metal, Glass/Transparent Plastic
