@@ -68,7 +68,7 @@ pip install numpy scipy matplotlib pandas tensorboard Pillow
 
 ### 3. Data
 
-Place the **HSI Drive** dataset (or your HSI dataset with the same structure) at a path of your choice. To download our dataset, please use [this link](INSERT_DATASET_LINK_HERE).
+Place the **HSI Drive** dataset (or your HSI dataset with the same structure) at a path of your choice. To download our dataset, please use [this link]((https://ipaccess.ehu.eus/HSI-Drive/)).
 
 Adjust `--data_path` in the training/evaluation scripts accordingly. The dataset loader in `Pixel_MLP/my_dataset.py` supports:
 
